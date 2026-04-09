@@ -17,7 +17,7 @@ cd "${MOD_DIR}"
 for old in "${OLD_JAR_NAMES[@]}"; do
     rm -f "${MOD_DIR}/fabric-1.19/build/libs/${old}"
 done
-JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home ./gradlew :fabric-1.19:build
+JAVA_HOME=/opt/homebrew/opt/openjdk@21 ./gradlew :fabric-1.19:build
 
 if [ ! -f "${SOURCE_JAR}" ]; then
     echo "Error: Build artifact not found at ${SOURCE_JAR}"
