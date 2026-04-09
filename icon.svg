@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Candidate 3: Magnifying glass over a Minecraft grass block (debug angle) -->
+  <!-- Background is transparent. -->
+
+  <!-- grass block centered, rotated isometric look via simple top trapezoid -->
+  <g transform="translate(56,80)">
+    <!-- top face (grass) -->
+    <polygon points="72,0 144,36 72,72 0,36" fill="#5fa341" stroke="#2f5e1f" stroke-width="3"/>
+    <!-- left face (dirt) -->
+    <polygon points="0,36 72,72 72,144 0,108" fill="#6b4423" stroke="#2f1c0d" stroke-width="3"/>
+    <!-- right face (dirt) -->
+    <polygon points="144,36 72,72 72,144 144,108" fill="#8a5a30" stroke="#2f1c0d" stroke-width="3"/>
+    <!-- a few grass speckles on top -->
+    <rect x="20" y="30" width="6" height="6" fill="#7dc057" transform="rotate(15 23 33)"/>
+    <rect x="100" y="48" width="6" height="6" fill="#7dc057" transform="rotate(15 103 51)"/>
+    <rect x="60" y="20" width="5" height="5" fill="#7dc057" transform="rotate(15 62 22)"/>
+  </g>
+
+  <!-- magnifying glass: ring + handle -->
+  <g>
+    <circle cx="170" cy="100" r="46" fill="#cfe6ff" fill-opacity="0.18" stroke="#e6e6e6" stroke-width="10"/>
+    <!-- glass shine -->
+    <circle cx="155" cy="85" r="14" fill="#ffffff" opacity="0.35"/>
+    <!-- handle -->
+    <line x1="200" y1="130" x2="240" y2="170" stroke="#9a6a2d" stroke-width="14" stroke-linecap="round"/>
+    <line x1="200" y1="130" x2="240" y2="170" stroke="#5a3d18" stroke-width="6" stroke-linecap="round"/>
+  </g>
+
+</svg>
