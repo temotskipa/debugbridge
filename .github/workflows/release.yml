@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Build Fabric 1.21.11 mod
+        working-directory: mod
+        run: ./gradlew :fabric-1.21.11:build --no-daemon
+
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: DebugBridge v${{ steps.version.outputs.VERSION }}
+          draft: false
+          prerelease: false
+          files: |
+            mod/fabric-1.21.11/build/libs/debugbridge-1.21.11-*.jar
+          body: |
+            ## DebugBridge v${{ steps.version.outputs.VERSION }}
+
+            Lua-Java bridge for Minecraft: a WebSocket REPL into the running client.
+
+            ### Installation
+            1. Install Fabric Loader for Minecraft 1.21.11
+            2. Drop the JAR into your `mods` folder
+            3. Launch the game - you'll see a developer warning on first run
+
+            ### Requirements
+            - Minecraft 1.21.11
+            - Fabric Loader >= 0.16.0
