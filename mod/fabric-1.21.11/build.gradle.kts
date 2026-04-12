@@ -13,9 +13,6 @@ dependencies {
     minecraft("com.mojang:minecraft:1.21.11")
     mappings(loom.officialMojangMappings())
     modImplementation("net.fabricmc:fabric-loader:0.16.10")
-    // fabric-api is not required by the mod itself — uncomment and set a version
-    // matching 1.21.11 if you need event hooks from fabric-api.
-    // modImplementation("net.fabricmc.fabric-api:fabric-api:???+1.21.11")
 
     // Include core's dependencies
     include(project(":core"))

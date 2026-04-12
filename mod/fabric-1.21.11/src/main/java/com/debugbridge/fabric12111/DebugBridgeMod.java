@@ -22,17 +22,70 @@ import java.nio.file.Path;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class DebugBridgeMod implements ClientModInitializer {
     private static final Logger LOG = LoggerFactory.getLogger("DebugBridge");
     private static final String MC_VERSION = "1.21.11";
 
+    private static DebugBridgeMod INSTANCE;
+
+    private BridgeConfig config;
+    private BridgeServer server;
+    private final AtomicBoolean warningShown = new AtomicBoolean(false);
+    private final AtomicBoolean serverStarted = new AtomicBoolean(false);
+    private boolean needsWarning = false;
+
     @Override
     public void onInitializeClient() {
+        INSTANCE = this;
         LOG.info("[DebugBridge] Initializing for Minecraft {}...", MC_VERSION);
 
         Path configDir = FabricLoader.getInstance().getConfigDir();
-        BridgeConfig config = BridgeConfig.load(configDir);
+        config = BridgeConfig.load(configDir);
+
+        if (config.developerModeAccepted) {
+            // Already accepted, start server immediately
+            startServer();
+        } else {
+            // Need to show warning screen - will be triggered by mixin tick
+            LOG.info("[DebugBridge] Developer mode not yet accepted, will show warning screen");
+            needsWarning = true;
+        }
+    }
+
+    /**
+     * Called by MinecraftClientMixin on each client tick.
+     */
+    public static void onClientTick(Minecraft mc) {
+        if (INSTANCE != null) {
+            INSTANCE.handleTick(mc);
+        }
+    }
+
+    private void handleTick(Minecraft mc) {
+        if (!needsWarning) return;
+
+        // Only show once, and only when no screen is open (game is ready)
+        if (!warningShown.get() && mc.screen == null && mc.getOverlay() == null) {
+            warningShown.set(true);
+            mc.setScreen(new DeveloperWarningScreen(config, accepted -> {
+                mc.setScreen(null);
+                if (accepted) {
+                    LOG.info("[DebugBridge] Developer mode accepted by user");
+                    startServer();
+                } else {
+                    LOG.info("[DebugBridge] Developer mode declined, mod disabled");
+                }
+                needsWarning = false;
+            }));
+        }
+    }
+
+    private void startServer() {
+        if (serverStarted.getAndSet(true)) {
+            return; // Already started
+        }
 
         MappingResolver resolver = buildResolver();
 
@@ -55,7 +108,7 @@ public class DebugBridgeMod implements ClientModInitializer {
         GameStateProvider stateProvider = new Minecraft12111StateProvider();
         ScreenshotProvider screenshotProvider = new Minecraft12111ScreenshotProvider();
 
-        BridgeServer server = new BridgeServer(config.port, resolver, dispatcher,
+        server = new BridgeServer(config.port, resolver, dispatcher,
             stateProvider, screenshotProvider);
         server.setGameDir(FabricLoader.getInstance().getGameDir());
         server.start();

@@ -22,22 +22,73 @@ import java.nio.file.Path;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class DebugBridgeMod implements ClientModInitializer {
     private static final Logger LOG = LoggerFactory.getLogger("DebugBridge");
+    private static final String MC_VERSION = "1.19";
+
+    private static DebugBridgeMod INSTANCE;
+
+    private BridgeConfig config;
+    private BridgeServer server;
+    private final AtomicBoolean warningShown = new AtomicBoolean(false);
+    private final AtomicBoolean serverStarted = new AtomicBoolean(false);
+    private boolean needsWarning = false;
 
     @Override
     public void onInitializeClient() {
-        LOG.info("[DebugBridge] Initializing for Minecraft 1.19...");
+        INSTANCE = this;
+        LOG.info("[DebugBridge] Initializing for Minecraft {}...", MC_VERSION);
 
-        // Load config from .minecraft/config/debugbridge.json
         Path configDir = FabricLoader.getInstance().getConfigDir();
-        BridgeConfig config = BridgeConfig.load(configDir);
+        config = BridgeConfig.load(configDir);
 
-        // Build mapping resolver
+        if (config.developerModeAccepted) {
+            // Already accepted, start server immediately
+            startServer();
+        } else {
+            // Need to show warning screen - will be triggered by mixin tick
+            LOG.info("[DebugBridge] Developer mode not yet accepted, will show warning screen");
+            needsWarning = true;
+        }
+    }
+
+    /**
+     * Called by MinecraftClientMixin on each client tick.
+     */
+    public static void onClientTick(Minecraft mc) {
+        if (INSTANCE != null) {
+            INSTANCE.handleTick(mc);
+        }
+    }
+
+    private void handleTick(Minecraft mc) {
+        if (!needsWarning) return;
+
+        // Only show once, and only when no screen is open (game is ready)
+        if (!warningShown.get() && mc.screen == null && mc.getOverlay() == null) {
+            warningShown.set(true);
+            mc.setScreen(new DeveloperWarningScreen(config, accepted -> {
+                mc.setScreen(null);
+                if (accepted) {
+                    LOG.info("[DebugBridge] Developer mode accepted by user");
+                    startServer();
+                } else {
+                    LOG.info("[DebugBridge] Developer mode declined, mod disabled");
+                }
+                needsWarning = false;
+            }));
+        }
+    }
+
+    private void startServer() {
+        if (serverStarted.getAndSet(true)) {
+            return; // Already started
+        }
+
         MappingResolver resolver = buildResolver();
 
-        // Thread dispatcher that posts to MC's main thread
         Minecraft mc = Minecraft.getInstance();
         ThreadDispatcher dispatcher = new ThreadDispatcher() {
             @Override
@@ -54,12 +105,10 @@ public class DebugBridgeMod implements ClientModInitializer {
             }
         };
 
-        // Game state provider
         GameStateProvider stateProvider = new Minecraft119StateProvider();
         ScreenshotProvider screenshotProvider = new Minecraft119ScreenshotProvider();
 
-        // Start the bridge server
-        BridgeServer server = new BridgeServer(config.port, resolver, dispatcher,
+        server = new BridgeServer(config.port, resolver, dispatcher,
             stateProvider, screenshotProvider);
         server.setGameDir(FabricLoader.getInstance().getGameDir());
         server.start();
@@ -71,23 +120,23 @@ public class DebugBridgeMod implements ClientModInitializer {
             MappingCache cache = new MappingCache();
             String proguardContent;
 
-            if (cache.has("1.19")) {
-                LOG.info("[DebugBridge] Loading cached 1.19 mappings...");
-                proguardContent = cache.load("1.19");
+            if (cache.has(MC_VERSION)) {
+                LOG.info("[DebugBridge] Loading cached {} mappings...", MC_VERSION);
+                proguardContent = cache.load(MC_VERSION);
             } else {
-                LOG.info("[DebugBridge] Downloading 1.19 mappings from Mojang...");
+                LOG.info("[DebugBridge] Downloading {} mappings from Mojang...", MC_VERSION);
                 MappingDownloader downloader = new MappingDownloader();
-                proguardContent = downloader.download("1.19");
-                cache.save("1.19", proguardContent);
+                proguardContent = downloader.download(MC_VERSION);
+                cache.save(MC_VERSION, proguardContent);
                 LOG.info("[DebugBridge] Mappings downloaded and cached.");
             }
 
             ParsedMappings mappings = ProGuardParser.parse(proguardContent);
             LOG.info("[DebugBridge] Parsed {} classes from mappings.", mappings.classes.size());
-            return new FabricMojangResolver("1.19", mappings);
+            return new FabricMojangResolver(MC_VERSION, mappings);
         } catch (Exception e) {
             LOG.error("[DebugBridge] Failed to load mappings, falling back to passthrough", e);
-            return new com.debugbridge.core.mapping.PassthroughResolver("1.19");
+            return new com.debugbridge.core.mapping.PassthroughResolver(MC_VERSION);
         }
     }
 
