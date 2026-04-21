@@ -4,13 +4,11 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MOD_DIR="${SCRIPT_DIR}/mod"
-MODRINTH_PROFILE_NAME="REPLACE-WITH-PROFILE-NAME"
-TARGET_DIR="/Users/cusgadmin/Library/Application Support/ModrinthApp/profiles/${MODRINTH_PROFILE_NAME}/mods/"
+MODRINTH_PROFILE_NAME="${MODRINTH_PROFILE_NAME:-REPLACE-WITH-PROFILE-NAME}"
 
 JAR_NAME="debugbridge-26.2-snapshot-3-1.1.0.jar"
 OLD_JAR_NAMES=("debugbridge-26.2-snapshot-3-1.0.0.jar")
 SOURCE_JAR="${MOD_DIR}/fabric-26.2-snapshot-3/build/libs/${JAR_NAME}"
-TARGET_JAR="${TARGET_DIR}/${JAR_NAME}"
 
 echo "Building DebugBridge mod (fabric-26.2-snapshot-3)..."
 cd "${MOD_DIR}"
@@ -25,8 +23,24 @@ if [ ! -f "${SOURCE_JAR}" ]; then
     exit 1
 fi
 
+if [ "${MODRINTH_PROFILE_NAME}" = "REPLACE-WITH-PROFILE-NAME" ] || [ -z "${MODRINTH_PROFILE_NAME}" ]; then
+    echo "Error: set MODRINTH_PROFILE_NAME before running this script"
+    exit 1
+fi
+
+TARGET_DIR="/Users/cusgadmin/Library/Application Support/ModrinthApp/profiles/${MODRINTH_PROFILE_NAME}/mods/"
+TARGET_JAR="${TARGET_DIR}/${JAR_NAME}"
+
 echo "Creating target directory if it doesn't exist..."
 mkdir -p "${TARGET_DIR}"
+
+# Remove any stale jar names from the target mods directory so only the current jar remains.
+for old in "${OLD_JAR_NAMES[@]}"; do
+    if [ -f "${TARGET_DIR}/${old}" ]; then
+        echo "Removing stale ${old} from mods folder..."
+        rm -f "${TARGET_DIR}/${old}"
+    fi
+done
 
 verify_jar() {
     local jar_file="$1"

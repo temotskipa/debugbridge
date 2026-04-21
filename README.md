@@ -128,7 +128,7 @@ Output JARs are in `mod/fabric-*/build/libs/`, including `mod/fabric-26.2-snapsh
 - Minecraft 1.21.11
 - Minecraft 26.2-snapshot-3
 
-The 26.2-snapshot-3 providers are render-backed and are expected to work on both Vulkan and OpenGL.
+The 26.2-snapshot-3 render-backed providers must work on both Vulkan and OpenGL backends.
 
 ## Usage
 
