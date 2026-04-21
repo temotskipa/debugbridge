@@ -3,7 +3,7 @@
     "id": "debugbridge",
     "version": "${version}",
     "name": "DebugBridge 26.2 Snapshot Bridge",
-    "description": "DebugBridge development build for Minecraft 26.2-snapshot-3 with boot path parity and stub providers.",
+    "description": "DebugBridge development build for Minecraft 26.2-snapshot-3 with boot path parity and full provider coverage.",
     "authors": ["Weikeng Chen"],
     "contact": {
         "homepage": "https://github.com/weikengchen/debugbridge",
