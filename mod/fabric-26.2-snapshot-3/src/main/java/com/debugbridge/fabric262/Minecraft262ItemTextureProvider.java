@@ -133,6 +133,7 @@ public class Minecraft262ItemTextureProvider implements ItemTextureProvider {
             GpuTextureView colorView = null;
             GpuTexture depthTex = null;
             GpuTextureView depthView = null;
+            GpuBuffer readBuffer = null;
             ProjectionMatrixBuffer projectionBuffer = null;
             GpuTextureView savedColor = null;
             GpuTextureView savedDepth = null;
@@ -141,8 +142,6 @@ public class Minecraft262ItemTextureProvider implements ItemTextureProvider {
             boolean scissorEnabled = false;
 
             try {
-                initReflection();
-
                 ItemStack stack = supplier.get();
 
                 TextureResult mapResult = tryRenderFilledMap(mc, stack);
@@ -150,6 +149,8 @@ public class Minecraft262ItemTextureProvider implements ItemTextureProvider {
                     future.complete(mapResult);
                     return;
                 }
+
+                initReflection();
 
                 TrackingItemStackRenderState renderState = new TrackingItemStackRenderState();
                 ItemModelResolver resolver = mc.getItemModelResolver();
@@ -224,24 +225,20 @@ public class Minecraft262ItemTextureProvider implements ItemTextureProvider {
                 projectionBuffer = null;
 
                 long bufferSize = (long) size * size * colorTex.getFormat().pixelSize();
-                GpuBuffer readBuffer = device.createBuffer(() -> "dbg_item_read",
+                readBuffer = device.createBuffer(() -> "dbg_item_read",
                         GpuBuffer.USAGE_MAP_READ | GpuBuffer.USAGE_COPY_DST, bufferSize);
                 CommandEncoder readEncoder = device.createCommandEncoder();
 
+                final GpuBuffer finalReadBuffer = readBuffer;
                 final GpuTexture finalColorTex = colorTex;
                 final GpuTextureView finalColorView = colorView;
                 final GpuTexture finalDepthTex = depthTex;
                 final GpuTextureView finalDepthView = depthView;
 
-                colorTex = null;
-                colorView = null;
-                depthTex = null;
-                depthView = null;
-
                 device.createCommandEncoder().copyTextureToBuffer(
-                        finalColorTex, readBuffer, 0L, () -> {
+                        finalColorTex, finalReadBuffer, 0L, () -> {
                             try (GpuBuffer.MappedView view =
-                                         readEncoder.mapBuffer(readBuffer, true, false)) {
+                                         readEncoder.mapBuffer(finalReadBuffer, true, false)) {
                                 BufferedImage image = new BufferedImage(
                                         size, size, BufferedImage.TYPE_INT_ARGB);
 
@@ -266,13 +263,19 @@ public class Minecraft262ItemTextureProvider implements ItemTextureProvider {
                             } catch (Exception e) {
                                 future.completeExceptionally(e);
                             } finally {
-                                readBuffer.close();
+                                finalReadBuffer.close();
                                 finalColorTex.close();
                                 finalColorView.close();
                                 finalDepthTex.close();
                                 finalDepthView.close();
                             }
                         }, 0);
+
+                readBuffer = null;
+                colorTex = null;
+                colorView = null;
+                depthTex = null;
+                depthView = null;
             } catch (Exception e) {
                 if (scissorEnabled) RenderSystem.disableScissorForRenderTypeDraws();
                 if (renderTargetsRedirected) {
@@ -281,6 +284,7 @@ public class Minecraft262ItemTextureProvider implements ItemTextureProvider {
                 }
                 if (projectionBackedUp) RenderSystem.restoreProjectionMatrix();
                 if (projectionBuffer != null) projectionBuffer.close();
+                if (readBuffer != null) readBuffer.close();
                 if (colorView != null) colorView.close();
                 if (colorTex != null) colorTex.close();
                 if (depthView != null) depthView.close();
