@@ -1,0 +1,25 @@
+{
+    "schemaVersion": 1,
+    "id": "debugbridge",
+    "version": "${version}",
+    "name": "DebugBridge Shell",
+    "description": "Placeholder shell module for DebugBridge 26.2 snapshot development. Not a production release.",
+    "authors": ["Weikeng Chen"],
+    "contact": {
+        "homepage": "https://github.com/weikengchen/debugbridge",
+        "sources": "https://github.com/weikengchen/debugbridge",
+        "issues": "https://github.com/weikengchen/debugbridge/issues"
+    },
+    "license": "MIT",
+    "icon": "assets/debugbridge/icon.png",
+    "environment": "client",
+    "entrypoints": {
+        "client": [
+            "com.debugbridge.fabric262snapshot3.DebugBridgeMod"
+        ]
+    },
+    "depends": {
+        "fabricloader": ">=0.19.2",
+        "minecraft": "26.2-snapshot-3"
+    }
+}
