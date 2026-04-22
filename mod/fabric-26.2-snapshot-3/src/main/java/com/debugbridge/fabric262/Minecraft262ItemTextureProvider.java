@@ -11,13 +11,16 @@ import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.render.GuiRenderer;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.OutlineBufferSource;
 import net.minecraft.client.renderer.Projection;
 import net.minecraft.client.renderer.ProjectionMatrixBuffer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.SubmitNodeStorage;
 import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.TrackingItemStackRenderState;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -37,25 +40,17 @@ import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.util.Base64;
+import java.util.LinkedHashSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Logger;
 
 /**
  * Renders items to an offscreen GPU texture through Minecraft's renderer and
  * reads the result back through the backend-neutral GPU abstraction.
  */
 public class Minecraft262ItemTextureProvider implements ItemTextureProvider {
-    private static final Logger LOG = Logger.getLogger("DebugBridge");
     private static final int TEXTURE_SIZE = 32;
-
-    private static volatile boolean reflectionReady = false;
-    private static Field gameRendererGuiRendererField;
-    private static Field guiRendererSubmitCollectorField;
-    private static Field guiRendererFeatureDispatcherField;
 
     @Override
     public TextureResult getItemTexture(int slot) throws Exception {
@@ -150,8 +145,6 @@ public class Minecraft262ItemTextureProvider implements ItemTextureProvider {
                     return;
                 }
 
-                initReflection();
-
                 TrackingItemStackRenderState renderState = new TrackingItemStackRenderState();
                 ItemModelResolver resolver = mc.getItemModelResolver();
                 resolver.updateForTopItem(renderState, stack, ItemDisplayContext.GUI,
@@ -161,12 +154,6 @@ public class Minecraft262ItemTextureProvider implements ItemTextureProvider {
                     future.completeExceptionally(new Exception("Empty render state for item"));
                     return;
                 }
-
-                GuiRenderer guiRenderer = (GuiRenderer) gameRendererGuiRendererField.get(mc.gameRenderer);
-                SubmitNodeCollector collector =
-                        (SubmitNodeCollector) guiRendererSubmitCollectorField.get(guiRenderer);
-                FeatureRenderDispatcher features =
-                        (FeatureRenderDispatcher) guiRendererFeatureDispatcherField.get(guiRenderer);
 
                 int size = TEXTURE_SIZE;
                 var device = RenderSystem.getDevice();
@@ -209,9 +196,7 @@ public class Minecraft262ItemTextureProvider implements ItemTextureProvider {
 
                 RenderSystem.enableScissorForRenderTypeDraws(0, 0, size, size);
                 scissorEnabled = true;
-                renderState.submit(poseStack, collector, 15728880,
-                        OverlayTexture.NO_OVERLAY, 0);
-                features.renderAllFeatures();
+                renderItemWithIsolatedSubmitState(mc, renderState, poseStack);
                 RenderSystem.disableScissorForRenderTypeDraws();
                 scissorEnabled = false;
                 poseStack.popPose();
@@ -301,6 +286,33 @@ public class Minecraft262ItemTextureProvider implements ItemTextureProvider {
         ItemStack get() throws Exception;
     }
 
+    private void renderItemWithIsolatedSubmitState(
+            Minecraft mc,
+            TrackingItemStackRenderState renderState,
+            PoseStack poseStack
+    ) {
+        SubmitNodeCollector collector = new SubmitNodeStorage();
+        try (MultiBufferSource.BufferSource bufferSource = createBufferSource();
+             MultiBufferSource.BufferSource crumblingBufferSource = createBufferSource();
+             OutlineBufferSource outlineBufferSource = new OutlineBufferSource(createBufferSource());
+             FeatureRenderDispatcher features = new FeatureRenderDispatcher(
+                     (SubmitNodeStorage) collector,
+                     mc.getModelManager(),
+                     bufferSource,
+                     mc.getAtlasManager(),
+                     outlineBufferSource,
+                     crumblingBufferSource,
+                     mc.font,
+                     mc.gameRenderer.gameRenderState())) {
+            renderState.submit(poseStack, collector, 15728880, OverlayTexture.NO_OVERLAY, 0);
+            features.renderAllFeatures();
+        }
+    }
+
+    private static MultiBufferSource.BufferSource createBufferSource() {
+        return MultiBufferSource.create(786432, new LinkedHashSet<RenderType>());
+    }
+
     private static final int MAP_SIZE = 128;
     private static final int[] BRIGHTNESS_MOD = {180, 220, 255, 135};
 
@@ -341,45 +353,4 @@ public class Minecraft262ItemTextureProvider implements ItemTextureProvider {
         return (0xFF << 24) | (r << 16) | (g << 8) | b;
     }
 
-    private static synchronized void initReflection() throws Exception {
-        if (reflectionReady) return;
-
-        for (Field f : net.minecraft.client.renderer.GameRenderer.class.getDeclaredFields()) {
-            if (f.getType() == GuiRenderer.class && !Modifier.isStatic(f.getModifiers())) {
-                gameRendererGuiRendererField = f;
-                f.setAccessible(true);
-                break;
-            }
-        }
-        if (gameRendererGuiRendererField == null) {
-            throw new Exception("Cannot find GameRenderer.guiRenderer field");
-        }
-
-        for (Field f : GuiRenderer.class.getDeclaredFields()) {
-            if (SubmitNodeCollector.class.isAssignableFrom(f.getType())
-                    && !Modifier.isStatic(f.getModifiers())) {
-                guiRendererSubmitCollectorField = f;
-                f.setAccessible(true);
-                break;
-            }
-        }
-        if (guiRendererSubmitCollectorField == null) {
-            throw new Exception("Cannot find GuiRenderer.submitNodeCollector field");
-        }
-
-        for (Field f : GuiRenderer.class.getDeclaredFields()) {
-            if (f.getType() == FeatureRenderDispatcher.class
-                    && !Modifier.isStatic(f.getModifiers())) {
-                guiRendererFeatureDispatcherField = f;
-                f.setAccessible(true);
-                break;
-            }
-        }
-        if (guiRendererFeatureDispatcherField == null) {
-            throw new Exception("Cannot find GuiRenderer.featureRenderDispatcher field");
-        }
-
-        reflectionReady = true;
-        LOG.info("[DebugBridge] 26.2 item texture provider reflection initialized");
-    }
 }
