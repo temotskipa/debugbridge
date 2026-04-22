@@ -13,18 +13,12 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectSortedSets;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.OutlineBufferSource;
-import net.minecraft.client.renderer.Projection;
-import net.minecraft.client.renderer.ProjectionMatrixBuffer;
-import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.client.renderer.SubmitNodeStorage;
+import net.minecraft.client.renderer.*;
 import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.TrackingItemStackRenderState;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -34,11 +28,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.decoration.ItemFrame;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemDisplayContext;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
-import net.minecraft.world.item.MapItem;
+import net.minecraft.world.item.*;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
 
@@ -97,24 +87,25 @@ public class Minecraft262ItemTextureProvider implements ItemTextureProvider {
             if (target == null) throw new Exception("Entity " + entityId + " not found");
 
             ItemStack stack;
-            if ("FRAME".equals(slotName) && target instanceof ItemFrame frame) {
-                stack = frame.getItem();
-            } else if ("DISPLAY".equals(slotName) && target instanceof Display.ItemDisplay itemDisplay) {
-                var renderState = itemDisplay.itemRenderState();
-                if (renderState == null || renderState.itemStack() == null) {
-                    throw new Exception("ItemDisplay render state not ready");
+            switch (target) {
+                case ItemFrame frame when "FRAME".equals(slotName) -> stack = frame.getItem();
+                case Display.ItemDisplay itemDisplay when "DISPLAY".equals(slotName) -> {
+                    var renderState = itemDisplay.itemRenderState();
+                    if (renderState == null || renderState.itemStack() == null) {
+                        throw new Exception("ItemDisplay render state not ready");
+                    }
+                    stack = renderState.itemStack();
                 }
-                stack = renderState.itemStack();
-            } else if (target instanceof LivingEntity living) {
-                EquipmentSlot slot;
-                try {
-                    slot = EquipmentSlot.valueOf(slotName);
-                } catch (IllegalArgumentException e) {
-                    throw new Exception("Unknown slot " + slotName);
+                case LivingEntity living -> {
+                    EquipmentSlot slot;
+                    try {
+                        slot = EquipmentSlot.valueOf(slotName);
+                    } catch (IllegalArgumentException e) {
+                        throw new Exception("Unknown slot " + slotName);
+                    }
+                    stack = living.getItemBySlot(slot);
                 }
-                stack = living.getItemBySlot(slot);
-            } else {
-                throw new Exception("Entity " + entityId + " has no equipment");
+                default -> throw new Exception("Entity " + entityId + " has no equipment");
             }
 
             if (stack.isEmpty()) {
@@ -296,11 +287,11 @@ public class Minecraft262ItemTextureProvider implements ItemTextureProvider {
             TrackingItemStackRenderState renderState,
             PoseStack poseStack
     ) {
-        SubmitNodeCollector collector = new SubmitNodeStorage();
+        SubmitNodeStorage collector = new SubmitNodeStorage();
         try (MultiBufferSource.BufferSource bufferSource = createMainBufferSource();
              OutlineBufferSource outlineBufferSource = new OutlineBufferSource(createOutlineBufferSource());
              FeatureRenderDispatcher features = new FeatureRenderDispatcher(
-                      (SubmitNodeStorage) collector,
+                     collector,
                       mc.getModelManager(),
                       bufferSource,
                       mc.getAtlasManager(),

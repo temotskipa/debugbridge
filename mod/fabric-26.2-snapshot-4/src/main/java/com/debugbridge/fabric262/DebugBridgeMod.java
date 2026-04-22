@@ -101,7 +101,7 @@ public class DebugBridgeMod implements ClientModInitializer {
         }
 
         PassthroughResolver resolver = new PassthroughResolver(MC_VERSION);
-        Minecraft mc = Minecraft.getInstance();
+        var mc = Minecraft.getInstance();
         ThreadDispatcher dispatcher = new ThreadDispatcher() {
             @Override
             public <T> T executeOnGameThread(Callable<T> task, long timeout) throws Exception {
@@ -146,7 +146,7 @@ public class DebugBridgeMod implements ClientModInitializer {
     private int startServerOnAvailablePort(int preferredPort, PassthroughResolver resolver,
                                            ThreadDispatcher dispatcher, GameStateProvider stateProvider,
                                            ScreenshotProvider screenshotProvider) {
-        int startPort = Math.max(PORT_RANGE_START, Math.min(PORT_RANGE_END, preferredPort));
+        int startPort = Math.clamp(preferredPort, PORT_RANGE_START, PORT_RANGE_END);
 
         for (int port = startPort; port <= PORT_RANGE_END; port++) {
             if (tryStartOnPort(port, resolver, dispatcher, stateProvider, screenshotProvider)) {

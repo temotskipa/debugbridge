@@ -14,13 +14,13 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * 26.2 snapshot framebuffer capture as JPEG.
- *
+ * <p>
  * Uses {@link Screenshot#takeScreenshot(RenderTarget, int, java.util.function.Consumer)}
  * which performs a backend-neutral readback through the client screenshot API.
  * The callback fires once the image is available; from inside that callback we
  * extract ARGB pixels via {@link NativeImage#getPixels()}, release the image,
  * and hand the pixel array to {@link JpegEncoder}.
- *
+ * <p>
  * The caller blocks on a {@link CompletableFuture} until the JPEG temp file has
  * been fully written.
  */
