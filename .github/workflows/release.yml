@@ -76,19 +76,19 @@ jobs:
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
       - name: Download 1.19 artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: release-fabric-1.19
           path: release-artifacts/fabric-1.19
 
       - name: Download 1.21.11 artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: release-fabric-1.21.11
           path: release-artifacts/fabric-1.21.11
 
       - name: Download 26.2 artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: release-fabric-26.2-snapshot-3
           path: release-artifacts/fabric-26.2-snapshot-3
