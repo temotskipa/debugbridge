@@ -11,6 +11,8 @@ import com.debugbridge.core.entity.ClientEntityGlowManager;
 import com.debugbridge.core.entity.LookedAtEntityProvider;
 import com.debugbridge.core.block.ClientBlockGlowManager;
 import com.debugbridge.core.block.NearbyBlocksProvider;
+import com.debugbridge.core.chat.ChatHistoryProvider;
+import com.debugbridge.core.screen.ScreenInspectProvider;
 import com.debugbridge.core.entity.NearbyEntitiesProvider;
 import com.debugbridge.core.screenshot.ScreenshotProvider;
 import com.debugbridge.core.snapshot.GameStateProvider;
@@ -81,6 +83,17 @@ public class BridgeServer extends WebSocketServer {
     private volatile LookedAtEntityProvider lookedAtEntityProvider;
 
     /**
+     * Recent client-side chat messages. Set by the version-specific module.
+     */
+    private volatile ChatHistoryProvider chatHistoryProvider;
+
+    /**
+     * Currently-open screen / container introspection. Set by the
+     * version-specific module.
+     */
+    private volatile ScreenInspectProvider screenInspectProvider;
+
+    /**
      * Callback for bind errors (e.g., port already in use). Called from the
      * WebSocket selector thread when the server fails to bind.
      */
@@ -145,6 +158,16 @@ public class BridgeServer extends WebSocketServer {
 
     public void setRunCommandEnabled(boolean enabled) {
         this.runCommandEnabled = enabled;
+    }
+
+    public void setChatHistoryProvider(ChatHistoryProvider provider) {
+        this.chatHistoryProvider = provider;
+        LOG.info("[DebugBridge] Chat history provider registered: " + provider.getClass().getSimpleName());
+    }
+
+    public void setScreenInspectProvider(ScreenInspectProvider provider) {
+        this.screenInspectProvider = provider;
+        LOG.info("[DebugBridge] Screen inspect provider registered: " + provider.getClass().getSimpleName());
     }
 
     /**
@@ -257,6 +280,8 @@ public class BridgeServer extends WebSocketServer {
                 case "nearbyBlocks" -> handleNearbyBlocks(req);
                 case "blockDetails" -> handleBlockDetails(req);
                 case "lookedAtEntity" -> handleLookedAtEntity(req);
+                case "chatHistory" -> handleChatHistory(req);
+                case "screenInspect" -> handleScreenInspect(req);
                 case "setEntityGlow" -> handleSetEntityGlow(req);
                 case "setBlockGlow" -> handleSetBlockGlow(req);
                 case "clearBlockGlow" -> handleClearBlockGlow(req);
@@ -389,11 +414,21 @@ public class BridgeServer extends WebSocketServer {
         }
         try {
             JsonObject snapshot = stateProvider.captureSnapshot();
+            // Map intermediary class names on any nested entity-type fields.
+            unresolveClassField(snapshot.has("player") && snapshot.get("player").isJsonObject()
+                ? snapshot.getAsJsonObject("player").getAsJsonObject("vehicle") : null, "type");
+            unresolveClassField(snapshot.getAsJsonObject("target"), "entityType");
             return BridgeResponse.success(req.id, snapshot, null);
         } catch (Exception e) {
             return BridgeResponse.error(req.id,
                 "Snapshot failed: " + e.getMessage());
         }
+    }
+
+    private void unresolveClassField(JsonObject obj, String field) {
+        if (obj == null || !obj.has(field)) return;
+        String mapped = resolver.unresolveClass(obj.get(field).getAsString());
+        if (mapped != null) obj.addProperty(field, mapped);
     }
 
     private BridgeResponse handleRunCommand(BridgeRequest req) {
@@ -656,6 +691,42 @@ public class BridgeServer extends WebSocketServer {
         } catch (Exception e) {
             return BridgeResponse.error(req.id,
                 "Looked-at entity query failed: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+        }
+    }
+
+    private BridgeResponse handleChatHistory(BridgeRequest req) {
+        if (chatHistoryProvider == null) {
+            return BridgeResponse.error(req.id,
+                "No chat history provider configured for this Minecraft version.");
+        }
+        int limit = req.payload != null && req.payload.has("limit")
+            ? req.payload.get("limit").getAsInt() : 50;
+        try {
+            JsonArray messages = chatHistoryProvider.getRecentMessages(limit);
+            JsonObject result = new JsonObject();
+            result.add("messages", messages);
+            result.addProperty("count", messages.size());
+            return BridgeResponse.success(req.id, result, null);
+        } catch (Exception e) {
+            return BridgeResponse.error(req.id,
+                "Chat history query failed: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+        }
+    }
+
+    private BridgeResponse handleScreenInspect(BridgeRequest req) {
+        if (screenInspectProvider == null) {
+            return BridgeResponse.error(req.id,
+                "No screen inspect provider configured for this Minecraft version.");
+        }
+        try {
+            JsonObject result = screenInspectProvider.inspectCurrentScreen();
+            // Map any class-name fields through the resolver so callers see Mojang names.
+            unresolveClassField(result, "type");
+            unresolveClassField(result, "menuClass");
+            return BridgeResponse.success(req.id, result, null);
+        } catch (Exception e) {
+            return BridgeResponse.error(req.id,
+                "Screen inspect failed: " + e.getClass().getSimpleName() + ": " + e.getMessage());
         }
     }
 
