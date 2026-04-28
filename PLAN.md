@@ -82,6 +82,16 @@ Two things to keep in mind while reading the rest:
 - Nobody uses `mc_run_command`. Agents prefer Lua because it returns values they can branch on.
 - Long `mc_execute` chains in luabridge's own session (33-call chain in transcript `86390bec-…`) were exploration of the item-render pipeline. That kind of exploration is exactly what `mc_execute` *should* support — just not for things a native endpoint already covers (#4–6).
 
+## Follow-ups (post-tier)
+
+### A. Texture wrappers return MCP image content, not stringified JSON
+- **Done 2026-04-28** ([mcdev-mcp e1c580d](https://github.com/weikengchen/mcdev-mcp/commit/e1c580d)). `mc_get_item_texture`, `mc_get_entity_item_texture`, `mc_get_item_texture_by_id` now return `[{type:"image", data, mimeType:"image/png"}, {type:"text", text:"<W>x<H> sprite=<name>"}]` — the model can see the rendered item directly instead of getting a wall of base64 string. Verified end-to-end on both ports (1.19=16x16, 1.21.11=32x32, both with valid PNG signatures).
+- [x] Done
+
+### B. `mc_chat_history` `includeJson` for styled-component access
+- **Done 2026-04-28** ([debugbridge b303d7b](https://github.com/weikengchen/debugbridge/commit/b303d7b), [mcdev-mcp f5faef0](https://github.com/weikengchen/mcdev-mcp/commit/f5faef0)). New `includeJson` boolean parameter (default false) on `mc_chat_history`. When true, each message also returns a `json` field with the full Component serialized — preserves colors, styles, click events, hover events. 1.21.11 uses `ComponentSerialization.CODEC.encodeStart(JsonOps, c)`; 1.19 uses `Component.Serializer.toJson(c)` re-parsed for consistent wire shape. Default off keeps the common-case response compact.
+- [x] Done
+
 ## How to use this doc
 
 1. Pick an item, work it, check the box.
