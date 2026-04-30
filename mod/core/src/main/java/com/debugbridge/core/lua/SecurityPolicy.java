@@ -19,13 +19,13 @@ public class SecurityPolicy {
         "com.sun.",
         "jdk."
     );
-
+    
     /**
      * Check if a class is safe to access from Lua.
      */
     public static boolean isAllowed(String className) {
         for (String prefix : BLOCKED_PREFIXES) {
-            if (className.startsWith(prefix) || className.equals(prefix)) {
+            if (className.startsWith(prefix)) {
                 return false;
             }
         }
