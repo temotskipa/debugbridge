@@ -21,17 +21,17 @@ import static net.bytebuddy.matcher.ElementMatchers.named;
  */
 final class AdviceInjector {
     private final Instrumentation instrumentation;
-    
+
     AdviceInjector(Instrumentation instrumentation) {
         this.instrumentation = Objects.requireNonNull(instrumentation, "instrumentation");
     }
-    
+
     void inject(MethodHookTarget target) throws Exception {
         String internalName = target.internalName();
         byte[] cachedBytecode = BytecodeCache.get(internalName);
         boolean mixinPresent = isMixinPresentNow();
         Class<?> loadedClass = findLoadedClass(target.className());
-        
+
         if (mixinPresent && cachedBytecode != null) {
             injectWithCachedBytecode(target, cachedBytecode);
         } else if (mixinPresent && loadedClass != null) {
@@ -42,7 +42,7 @@ final class AdviceInjector {
             injectStandard(target);
         }
     }
-    
+
     /**
      * Standard advice injection using Byte Buddy's AgentBuilder.
      * Used when Mixin is not present or the class has not loaded yet.
@@ -67,7 +67,7 @@ final class AdviceInjector {
                         System.err.println("[DebugBridge] Transform error on "
                                 + typeName + ": " + throwable.getMessage());
                     }
-                    
+
                     @Override
                     public void onComplete(String typeName,
                                            ClassLoader classLoader,
@@ -85,7 +85,7 @@ final class AdviceInjector {
                                         .on(named(target.methodName()))))
                 .installOn(instrumentation);
     }
-    
+
     /**
      * Mixin-safe advice injection using cached post-Mixin bytecode.
      * <p>
@@ -101,42 +101,42 @@ final class AdviceInjector {
                                           byte[] cachedBytecode) throws Exception {
         System.out.println("[DebugBridge] Using cached bytecode for " + target.className()
                 + " (" + cachedBytecode.length + " bytes)");
-        
+
         Class<?> targetClass = findLoadedClass(target.className());
-        
+
         if (targetClass == null) {
             throw new ClassNotFoundException("Class not loaded: " + target.className());
         }
-        
+
         ClassFileLocator locator = new ClassFileLocator.Compound(
                 ClassFileLocator.Simple.of(target.className(), cachedBytecode),
                 ClassFileLocator.ForClassLoader.of(targetClass.getClassLoader()),
                 ClassFileLocator.ForClassLoader.ofSystemLoader(),
                 ClassFileLocator.ForClassLoader.ofBootLoader()
         );
-        
+
         TypePool typePool = TypePool.Default.of(locator);
         TypeDescription typeDesc = typePool.describe(target.className()).resolve();
-        
+
         DynamicType.Builder<?> builder = new net.bytebuddy.ByteBuddy()
                 .with(TypeValidation.DISABLED)
                 .redefine(typeDesc, locator);
-        
+
         // Apply advice
         DynamicType.Unloaded<?> transformed = builder
                 .visit(Advice.to(AgentLoggingAdvice.class).on(named(target.methodName())))
                 .make();
-        
+
         byte[] newBytecode = transformed.getBytes();
-        
+
         // Redefine the class with our transformed bytecode
         instrumentation.redefineClasses(
                 new java.lang.instrument.ClassDefinition(targetClass, newBytecode));
-        
+
         // Update cache with the new bytecode (includes our advice + Mixin)
         BytecodeCache.put(target.internalName(), newBytecode);
     }
-    
+
     private Class<?> findLoadedClass(String className) {
         for (Class<?> c : instrumentation.getAllLoadedClasses()) {
             if (c.getName().equals(className)) {
@@ -145,12 +145,12 @@ final class AdviceInjector {
         }
         return null;
     }
-    
+
     private boolean isMixinPresentNow() {
         if (BytecodeCache.isMixinPresent()) {
             return true;
         }
-        
+
         return findLoadedClass("org.spongepowered.asm.mixin.Mixin") != null
                 || findLoadedClass("org.spongepowered.asm.mixin.transformer.MixinTransformer") != null
                 || findLoadedClass("org.spongepowered.asm.service.MixinService") != null;

@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TimeoutTest {
-    
+
     @Test
     @Timeout(10)
         // JUnit will kill the test if it takes > 10s
@@ -22,16 +22,16 @@ class TimeoutTest {
                 new ObjectRefStore()
         );
         runtime.setMaxExecutionTimeMs(2000); // 2 second timeout
-        
+
         long start = System.currentTimeMillis();
         var result = runtime.execute("while true do end");
         long elapsed = System.currentTimeMillis() - start;
-        
+
         System.out.println("Elapsed: " + elapsed + "ms");
         System.out.println("Success: " + result.isSuccess());
         System.out.println("Error: " + result.error);
         System.out.println("Output: " + result.output);
-        
+
         assertFalse(result.isSuccess());
         assertTrue(result.error.contains("timed out"),
                 "Expected timeout error, got: " + result.error);

@@ -9,7 +9,7 @@ import com.google.gson.JsonObject;
  * when iterating slots from Lua.
  */
 public interface ScreenInspectProvider {
-    
+
     /**
      * Snapshot the currently-open screen.
      *

@@ -178,7 +178,7 @@ The Fabric mod JARs include these libraries (shaded):
 ### File System Access
 
 - **Reads**: Mapped builds read Mojang mapping files cached in the game directory
-- **Writes**: 
+- **Writes**:
   - Cached mappings in game directory
   - Screenshots to temp directory (when requested via MCP)
   - Log files (when agent module is used)

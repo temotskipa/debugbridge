@@ -19,7 +19,7 @@ class RepositoryScaffoldingTest {
         if (!Files.isDirectory(sourceRoot)) {
             return;
         }
-        
+
         try (Stream<Path> paths = Files.walk(sourceRoot)) {
             for (Path path : paths.filter(path -> path.toString().endsWith(".java")).toList()) {
                 String source = Files.readString(path);
@@ -31,36 +31,36 @@ class RepositoryScaffoldingTest {
             }
         }
     }
-    
+
     private static Path repoRoot() {
         return Path.of(System.getProperty("user.dir")).getParent();
     }
-    
+
     @Test
     void rootAgentMapPointsToArchitectureAndVerification() throws IOException {
         Path agents = repoRoot().resolve("AGENTS.md");
         Path architecture = repoRoot().resolve("ARCHITECTURE.md");
-        
+
         assertTrue(Files.isRegularFile(agents), "AGENTS.md should be the short repo map for future agents");
         assertTrue(Files.isRegularFile(architecture), "ARCHITECTURE.md should be the source of module boundaries");
-        
+
         String agentMap = Files.readString(agents);
         assertTrue(agentMap.contains("ARCHITECTURE.md"), "AGENTS.md should point to the architecture source of truth");
         assertTrue(agentMap.contains(":agent:test :core:test :hooks:jar :fabric-26.2-dev:jar"),
                 "AGENTS.md should contain the primary DebugBridge verification command");
         assertTrue(agentMap.contains("MCP live smoke"), "AGENTS.md should tell agents where the live smoke path starts");
-        
+
         String architectureMap = Files.readString(architecture);
         assertTrue(architectureMap.contains("core -> hooks"), "ARCHITECTURE.md should document disallowed core-to-hooks edges");
         assertTrue(architectureMap.contains("hooks -> core"), "ARCHITECTURE.md should document disallowed hooks-to-core edges");
         assertTrue(architectureMap.contains("agent jar must not embed hooks"),
                 "ARCHITECTURE.md should document the bootstrap hooks packaging invariant");
     }
-    
+
     @Test
     void productionModulesKeepDeclaredDependencyDirection() throws IOException {
         List<String> violations = new ArrayList<>();
-        
+
         requireNoImports("core", List.of(
                 "import com.debugbridge.agent.",
                 "import com.debugbridge.hooks.",
@@ -80,19 +80,19 @@ class RepositoryScaffoldingTest {
                     "import com.debugbridge.hooks."
             ), violations);
         }
-        
+
         assertEquals(List.of(), violations,
                 "Module boundary violations should be fixed by moving through core interfaces or version-local adapters");
     }
-    
+
     @Test
     void liveSmokeHarnessIsDiscoverableAndMcpFirst() throws IOException {
         Path script = repoRoot().resolve("tools/debugbridge-live-smoke.ps1");
         Path guide = repoRoot().resolve("docs/live-smoke.md");
-        
+
         assertTrue(Files.isRegularFile(script), "tools/debugbridge-live-smoke.ps1 should prepare the live test run");
         assertTrue(Files.isRegularFile(guide), "docs/live-smoke.md should hold the MCP live-test recipe");
-        
+
         String scriptText = Files.readString(script);
         assertTrue(scriptText.contains(":agent:test :core:test :hooks:jar :fabric-26.2-dev:jar"),
                 "live smoke script should build the affected DebugBridge artifacts");
@@ -102,7 +102,7 @@ class RepositoryScaffoldingTest {
                 "live smoke script should pass the built agent jar path into runClient");
         assertTrue(scriptText.contains("-Pdebugbridge.hooks.jar="),
                 "live smoke script should pass the built hooks jar path into runClient");
-        
+
         String guideText = Files.readString(guide).toLowerCase(Locale.ROOT);
         assertTrue(guideText.contains("mc_connect"), "live smoke guide should use MCP connection calls");
         assertTrue(guideText.contains("mc_logger"), "live smoke guide should use MCP logger calls");

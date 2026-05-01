@@ -10,7 +10,7 @@ import java.util.function.Predicate;
  * catch exceptions internally and return false on error.
  */
 public class LogFilters {
-    
+
     /**
      * Log only when argument at index matches a value via equals().
      */
@@ -24,7 +24,7 @@ public class LogFilters {
             }
         };
     }
-    
+
     /**
      * Log only when argument.toString() contains a substring.
      */
@@ -39,7 +39,7 @@ public class LogFilters {
             }
         };
     }
-    
+
     /**
      * Log only when argument is an instance of a type (partial name match).
      */
@@ -54,7 +54,7 @@ public class LogFilters {
             }
         };
     }
-    
+
     /**
      * Rate-limit: log at most once per intervalMs milliseconds.
      */
@@ -67,7 +67,7 @@ public class LogFilters {
                     && lastLog.compareAndSet(last, now);
         };
     }
-    
+
     /**
      * Sample: log only every N calls.
      */
@@ -75,7 +75,7 @@ public class LogFilters {
         AtomicLong counter = new AtomicLong(0);
         return args -> counter.incrementAndGet() % n == 0;
     }
-    
+
     /**
      * Combine multiple filters with AND logic.
      */
@@ -88,7 +88,7 @@ public class LogFilters {
             return true;
         };
     }
-    
+
     /**
      * Combine multiple filters with OR logic.
      */
@@ -101,21 +101,21 @@ public class LogFilters {
             return false;
         };
     }
-    
+
     /**
      * Negate a filter.
      */
     public static Predicate<Object[]> not(Predicate<Object[]> filter) {
         return args -> !filter.test(args);
     }
-    
+
     /**
      * Always log (no filtering).
      */
     public static Predicate<Object[]> always() {
         return args -> true;
     }
-    
+
     /**
      * Never log (for testing).
      */

@@ -15,17 +15,17 @@ import java.util.concurrent.ConcurrentHashMap;
  * Must be on the bootstrap classloader alongside DebugBridgeLogger.
  */
 public class BytecodeCache {
-    
+
     // className (internal format: com/example/MyClass) -> bytecode
     private static final ConcurrentHashMap<String, byte[]> cache =
             new ConcurrentHashMap<>();
-    
+
     // Track whether our observer transformer has been installed
     private static volatile boolean observerInstalled = false;
-    
+
     // Track whether Mixin is present in this environment
     private static volatile Boolean mixinPresent = null;
-    
+
     /**
      * Store bytecode for a class. Called by our observer transformer.
      */
@@ -34,7 +34,7 @@ public class BytecodeCache {
             cache.put(className, bytecode.clone());
         }
     }
-    
+
     /**
      * Get cached bytecode for a class.
      *
@@ -44,42 +44,42 @@ public class BytecodeCache {
         byte[] cached = cache.get(className);
         return cached != null ? cached.clone() : null;
     }
-    
+
     /**
      * Check if we have cached bytecode for a class.
      */
     public static boolean has(String className) {
         return cache.containsKey(className);
     }
-    
+
     /**
      * Remove cached bytecode (e.g., after successful retransformation).
      */
     public static void remove(String className) {
         cache.remove(className);
     }
-    
+
     /**
      * Clear all cached bytecode.
      */
     public static void clear() {
         cache.clear();
     }
-    
+
     /**
      * Check if our observer is active.
      */
     public static boolean isObserverInstalled() {
         return observerInstalled;
     }
-    
+
     /**
      * Mark that our observer transformer has been installed.
      */
     public static void setObserverInstalled(boolean installed) {
         observerInstalled = installed;
     }
-    
+
     /**
      * Detect whether SpongePowered Mixin is present in this environment.
      * Cached after first detection.
@@ -90,7 +90,7 @@ public class BytecodeCache {
         }
         return mixinPresent;
     }
-    
+
     private static boolean detectMixin() {
         // Check for common Mixin classes
         String[] mixinClasses = {
@@ -98,7 +98,7 @@ public class BytecodeCache {
                 "org.spongepowered.asm.mixin.transformer.MixinTransformer",
                 "org.spongepowered.asm.service.MixinService"
         };
-        
+
         for (String className : mixinClasses) {
             try {
                 Class.forName(className);
@@ -109,7 +109,7 @@ public class BytecodeCache {
         }
         return false;
     }
-    
+
     /**
      * Get statistics about the cache.
      */

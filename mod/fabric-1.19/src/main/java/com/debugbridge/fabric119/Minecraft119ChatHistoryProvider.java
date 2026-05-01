@@ -14,7 +14,7 @@ import java.lang.reflect.Method;
 import java.util.List;
 
 public class Minecraft119ChatHistoryProvider implements ChatHistoryProvider {
-    
+
     private static volatile Field allMessagesField;
     private static volatile Method messageGetter;
     private static volatile Field addedTimeField;
@@ -65,7 +65,7 @@ public class Minecraft119ChatHistoryProvider implements ChatHistoryProvider {
         allMessagesField = f;
         return f;
     }
-    
+
     private static Method messageGetter(Class<?> cls, MappingResolver resolver) throws NoSuchMethodException {
         Method m = messageGetter;
         if (m != null && m.getDeclaringClass() == cls) return m;
@@ -76,7 +76,7 @@ public class Minecraft119ChatHistoryProvider implements ChatHistoryProvider {
         messageGetter = m;
         return m;
     }
-    
+
     private static Field addedTimeField(Class<?> cls, MappingResolver resolver) {
         Field f = addedTimeField;
         if (f != null && f.getDeclaringClass() == cls) return f;

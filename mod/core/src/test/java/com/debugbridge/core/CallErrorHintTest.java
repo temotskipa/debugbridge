@@ -27,7 +27,7 @@ class CallErrorHintTest {
     private static final int PORT = 19883;
     private static BridgeServer server;
     private TestClient client;
-    
+
     @BeforeAll
     static void startServer() throws Exception {
         server = new BridgeServer(PORT,
@@ -36,23 +36,23 @@ class CallErrorHintTest {
         server.start();
         Thread.sleep(500);
     }
-    
+
     @AfterAll
     static void stopServer() throws Exception {
         if (server != null) server.stop();
     }
-    
+
     @BeforeEach
     void connect() throws Exception {
         client = new TestClient(new URI("ws://127.0.0.1:" + PORT));
         assertTrue(client.connectBlocking(3, TimeUnit.SECONDS));
     }
-    
+
     @AfterEach
     void disconnect() throws Exception {
         if (client != null) client.closeBlocking();
     }
-    
+
     @Test
     void testCallingFieldAsMethodGivesActionableError() throws Exception {
         JsonObject resp = execute("""
@@ -63,7 +63,7 @@ class CallErrorHintTest {
         assertFalse(resp.get("success").getAsBoolean(), "Should fail");
         String error = resp.get("error").getAsString();
         System.out.println("obj:field() error:\n" + error);
-        
+
         // Must identify this as a Java-object-call, not LuaJ's generic mumble.
         assertTrue(error.contains("Java object"),
                 "Error should mention it's a Java object, got: " + error);
@@ -79,7 +79,7 @@ class CallErrorHintTest {
         assertTrue(error.contains("obj.inner") || error.contains(".inner."),
                 "Error should suggest obj.inner.<sub> syntax, got: " + error);
     }
-    
+
     @Test
     void testCallingFieldAsMethodDetectsColonCall() throws Exception {
         JsonObject resp = execute("""
@@ -93,9 +93,9 @@ class CallErrorHintTest {
         assertTrue(error.contains("obj:") || error.contains("obj.inner"),
                 "Should explain the colon-call desugaring, got: " + error);
     }
-    
+
     // ==================== obj:field() mistake ====================
-    
+
     @Test
     void testFieldChainAfterFieldAccessStillWorks() throws Exception {
         // Field chaining (the suggested fix) should still work normally.
@@ -109,7 +109,7 @@ class CallErrorHintTest {
         assertEquals(42,
                 resp.get("result").getAsJsonObject().get("value").getAsInt());
     }
-    
+
     @Test
     void testCallingClassWrapperAsConstructorGivesActionableError() throws Exception {
         JsonObject resp = execute("""
@@ -119,13 +119,13 @@ class CallErrorHintTest {
         assertFalse(resp.get("success").getAsBoolean(), "Should fail");
         String error = resp.get("error").getAsString();
         System.out.println("Class() error:\n" + error);
-        
+
         assertTrue(error.contains("ArrayList"),
                 "Should name the class, got: " + error);
         assertTrue(error.contains("java.new"),
                 "Should tell the user to use java.new, got: " + error);
     }
-    
+
     @Test
     void testCallingClassWrapperWithArgsGivesActionableError() throws Exception {
         JsonObject resp = execute("""
@@ -137,9 +137,9 @@ class CallErrorHintTest {
         assertTrue(error.contains("java.new"),
                 "Should recommend java.new, got: " + error);
     }
-    
+
     // ==================== class(args) mistake ====================
-    
+
     private JsonObject execute(String code) throws Exception {
         JsonObject req = new JsonObject();
         req.addProperty("id", "hint_" + System.nanoTime());
@@ -147,13 +147,13 @@ class CallErrorHintTest {
         JsonObject payload = new JsonObject();
         payload.addProperty("code", code);
         req.add("payload", payload);
-        
+
         client.send(new Gson().toJson(req));
         String response = client.responses.poll(5, TimeUnit.SECONDS);
         assertNotNull(response, "No response within 5s");
         return JsonParser.parseString(response).getAsJsonObject();
     }
-    
+
     /**
      * Public helper class used as the target of field-shadows-method tests.
      * Mimics the {@code Entity.level} / {@code Entity.level()} pattern that
@@ -163,39 +163,39 @@ class CallErrorHintTest {
      */
     public static class Outer {
         public final Inner inner = new Inner();
-        
+
         @SuppressWarnings("unused")  // Accessed reflectively through the bridge
         public Inner inner() {
             return inner;
         }
     }
-    
+
     // ==================== Helpers ====================
-    
+
     public static class Inner {
         public final int value = 42;
     }
-    
+
     private static class TestClient extends WebSocketClient {
         final LinkedBlockingQueue<String> responses = new LinkedBlockingQueue<>();
-        
+
         TestClient(URI uri) {
             super(uri);
         }
-        
+
         @Override
         public void onOpen(ServerHandshake h) {
         }
-        
+
         @Override
         public void onMessage(String msg) {
             responses.offer(msg);
         }
-        
+
         @Override
         public void onClose(int c, String r, boolean rem) {
         }
-        
+
         @Override
         public void onError(Exception e) {
             e.printStackTrace();

@@ -21,30 +21,30 @@ class BytecodeObserverTest {
         field.setAccessible(true);
         field.set(null, value);
     }
-    
+
     @BeforeEach
     void resetState() throws Exception {
         BytecodeCache.clear();
         setStaticField(BytecodeObserver.class, "instance", null);
         setStaticField(BytecodeObserver.class, "instrumentation", null);
     }
-    
+
     @Test
     void explicitCacheRequestCapturesNonMinecraftClass() {
         RecordingInstrumentation recording = new RecordingInstrumentation(Target.class, true);
-        
+
         BytecodeObserver.install(recording.instrumentation());
         BytecodeObserver.cacheLoadedClass(Target.class);
-        
+
         assertEquals(1, recording.retransformCalls);
         assertTrue(BytecodeCache.has(Target.class.getName().replace('.', '/')));
     }
-    
+
     private static final class Target {
         void tick() {
         }
     }
-    
+
     static final class RecordingInstrumentation implements InvocationHandler {
         private final Class<?>[] loadedClasses;
         private final boolean feedTransformerOnRetransform;
@@ -52,16 +52,16 @@ class BytecodeObserverTest {
         int retransformCalls;
         int redefineCalls;
         private ClassFileTransformer transformer;
-        
+
         RecordingInstrumentation(Class<?> loadedClass, boolean feedTransformerOnRetransform) {
             this(new Class<?>[]{loadedClass}, feedTransformerOnRetransform);
         }
-        
+
         RecordingInstrumentation(Class<?>[] loadedClasses, boolean feedTransformerOnRetransform) {
             this.loadedClasses = loadedClasses;
             this.feedTransformerOnRetransform = feedTransformerOnRetransform;
         }
-        
+
         private static Object defaultValue(Class<?> returnType) {
             if (returnType == Void.TYPE) return null;
             if (returnType == Boolean.TYPE) return false;
@@ -74,7 +74,7 @@ class BytecodeObserverTest {
             if (returnType == Character.TYPE) return '\0';
             return null;
         }
-        
+
         Instrumentation instrumentation() {
             return (Instrumentation) Proxy.newProxyInstance(
                     Instrumentation.class.getClassLoader(),
@@ -82,7 +82,7 @@ class BytecodeObserverTest {
                     this
             );
         }
-        
+
         @Override
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
             return switch (method.getName()) {

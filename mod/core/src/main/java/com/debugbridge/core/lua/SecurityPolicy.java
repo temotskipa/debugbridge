@@ -19,7 +19,7 @@ public class SecurityPolicy {
         "com.sun.",
         "jdk."
     );
-    
+
     /**
      * Check if a class is safe to access from Lua.
      */

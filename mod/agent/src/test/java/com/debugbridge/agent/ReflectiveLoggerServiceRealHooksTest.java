@@ -21,13 +21,13 @@ class ReflectiveLoggerServiceRealHooksTest {
         field.setAccessible(true);
         return field.get(null);
     }
-    
+
     private static void setStaticField(Class<?> owner, String name, Object value) throws Exception {
         Field field = owner.getDeclaredField(name);
         field.setAccessible(true);
         field.set(null, value);
     }
-    
+
     @BeforeEach
     void resetRuntime() throws Exception {
         setStaticField(DebugBridgeAgent.class, "initialized", true);
@@ -37,12 +37,12 @@ class ReflectiveLoggerServiceRealHooksTest {
         ((Map<?, ?>) getStaticField(DebugBridgeLogger.class, "fileLoggers")).clear();
         ((Collection<?>) getStaticField(DebugBridgeLogger.class, "recentErrors")).clear();
     }
-    
+
     @Test
     void reflectiveServiceBindsToRealAgentAndHooksApis() throws Exception {
         ReflectiveLoggerService service = new ReflectiveLoggerService();
         String outputFile = Files.createTempFile("debugbridge-real-hooks", ".log").toString();
-        
+
         LoggerService.InstallResult result = service.install(
                 "example.Target.method",
                 15,
@@ -53,7 +53,7 @@ class ReflectiveLoggerServiceRealHooksTest {
                 1,
                 Map.of("type", "sample", "n", 2)
         );
-        
+
         assertTrue(result.success());
         assertEquals("example.Target.method", service.listActive().get(0).method());
         assertTrue(service.listInjectedMethods().contains("example.Target.method"));

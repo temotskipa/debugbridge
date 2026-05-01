@@ -17,10 +17,10 @@ public final class DebugBridgeLogger {
     public static boolean lastLogReturn;
     public static boolean lastLogTiming;
     public static int lastArgDepth;
-    
+
     private DebugBridgeLogger() {
     }
-    
+
     public static void reset() {
         NEXT_ID.set(1);
         injectedMethods.clear();
@@ -34,7 +34,7 @@ public final class DebugBridgeLogger {
         lastLogTiming = false;
         lastArgDepth = 0;
     }
-    
+
     public static long install(String methodId, String outputFile, Duration duration,
                                Predicate<Object[]> filter, boolean logArgs,
                                boolean logReturn, boolean logTiming, int argDepth) {
@@ -48,7 +48,7 @@ public final class DebugBridgeLogger {
         lastLogReturn = logReturn;
         lastLogTiming = logTiming;
         lastArgDepth = argDepth;
-        
+
         Map<String, Object> entry = new LinkedHashMap<>();
         entry.put("id", id);
         entry.put("method", methodId);
@@ -57,15 +57,15 @@ public final class DebugBridgeLogger {
         active.put(id, entry);
         return id;
     }
-    
+
     public static boolean cancel(long id) {
         return active.remove(id) != null;
     }
-    
+
     public static List<Map<String, Object>> listActive() {
         return new ArrayList<>(active.values());
     }
-    
+
     public static boolean isInjected(String methodId) {
         return injectedMethods.contains(methodId);
     }

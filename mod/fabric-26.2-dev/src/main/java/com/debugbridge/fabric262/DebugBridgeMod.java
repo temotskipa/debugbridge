@@ -28,10 +28,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class DebugBridgeMod implements ClientModInitializer {
     private static final Logger LOG = LoggerFactory.getLogger("DebugBridge");
     private static final String MC_VERSION = "26.2-snapshot-5";
-    
+
     private static final int PORT_RANGE_START = 9876;
     private static final int PORT_RANGE_END = 9886;
-    
+
     private static DebugBridgeMod INSTANCE;
     private final AtomicBoolean warningShown = new AtomicBoolean(false);
     private final AtomicBoolean serverStarted = new AtomicBoolean(false);
@@ -40,21 +40,21 @@ public class DebugBridgeMod implements ClientModInitializer {
     private boolean needsWarning = false;
     private String startupError = null;
     private String startupInfo = null;
-    
+
     public static void onClientTick(Minecraft mc) {
         if (INSTANCE != null) {
             INSTANCE.handleTick(mc);
         }
     }
-    
+
     @Override
     public void onInitializeClient() {
         INSTANCE = this;
         LOG.info("[DebugBridge] Initializing for Minecraft {}...", MC_VERSION);
-        
+
         Path configDir = FabricLoader.getInstance().getConfigDir();
         config = BridgeConfig.load(configDir);
-        
+
         if (config.developerModeAccepted) {
             startServer();
         } else {
@@ -62,7 +62,7 @@ public class DebugBridgeMod implements ClientModInitializer {
             needsWarning = true;
         }
     }
-    
+
     private void handleTick(Minecraft mc) {
         if (startupError != null && mc.player != null) {
             mc.player.sendSystemMessage(
@@ -74,11 +74,11 @@ public class DebugBridgeMod implements ClientModInitializer {
                     Component.literal("[DebugBridge] " + startupInfo).withStyle(s -> s.withColor(0x55FF55)));
             startupInfo = null;
         }
-        
+
         if (!needsWarning) {
             return;
         }
-        
+
         if (!warningShown.get() && mc.gui.screen() == null && mc.gui.overlay() == null) {
             warningShown.set(true);
             mc.gui.setScreen(new DeveloperWarningScreen(config, accepted -> {
@@ -93,12 +93,12 @@ public class DebugBridgeMod implements ClientModInitializer {
             }));
         }
     }
-    
+
     private void startServer() {
         if (serverStarted.getAndSet(true)) {
             return;
         }
-        
+
         PassthroughResolver resolver = new PassthroughResolver(MC_VERSION);
         var mc = Minecraft.getInstance();
         ThreadDispatcher dispatcher = new ThreadDispatcher() {
@@ -115,23 +115,23 @@ public class DebugBridgeMod implements ClientModInitializer {
                 return future.get(timeout, TimeUnit.MILLISECONDS);
             }
         };
-        
+
         GameStateProvider stateProvider = new Minecraft262StateProvider();
         ScreenshotProvider screenshotProvider = new Minecraft262ScreenshotProvider();
         ItemTextureProvider textureProvider = new Minecraft262ItemTextureProvider();
         Minecraft262NearbyEntitiesProvider entitiesProvider = new Minecraft262NearbyEntitiesProvider();
         Minecraft262LookedAtEntityProvider lookedAtProvider = new Minecraft262LookedAtEntityProvider();
-        
+
         int actualPort = startServerOnAvailablePort(
                 config.port, resolver, dispatcher, stateProvider, screenshotProvider);
-        
+
         if (actualPort == -1) {
             String msg = "Could not bind to any port in range " + PORT_RANGE_START + "-" + PORT_RANGE_END;
             LOG.error("[DebugBridge] {}", msg);
             startupError = msg;
             return;
         }
-        
+
         server.setTextureProvider(textureProvider);
         server.setEntitiesProvider(entitiesProvider);
         server.setLookedAtEntityProvider(lookedAtProvider);
@@ -139,40 +139,40 @@ public class DebugBridgeMod implements ClientModInitializer {
         server.setScreenInspectProvider(new Minecraft262ScreenInspectProvider());
         server.setLoggerInjectionEnabled(config.loggerInjectionEnabled);
         server.setRunCommandEnabled(config.runCommandEnabled);
-        
+
         if (actualPort != config.port) {
             startupInfo = "Server started on port " + actualPort + " (default " + config.port + " was in use)";
         }
         LOG.info("[DebugBridge] Server started on port {}", actualPort);
     }
-    
+
     private int startServerOnAvailablePort(int preferredPort, PassthroughResolver resolver,
                                            ThreadDispatcher dispatcher, GameStateProvider stateProvider,
                                            ScreenshotProvider screenshotProvider) {
         int startPort = Math.clamp(preferredPort, PORT_RANGE_START, PORT_RANGE_END);
-        
+
         for (int port = startPort; port <= PORT_RANGE_END; port++) {
             if (tryStartOnPort(port, resolver, dispatcher, stateProvider, screenshotProvider)) {
                 return port;
             }
         }
-        
+
         for (int port = PORT_RANGE_START; port < startPort; port++) {
             if (tryStartOnPort(port, resolver, dispatcher, stateProvider, screenshotProvider)) {
                 return port;
             }
         }
-        
+
         return -1;
     }
-    
+
     private boolean tryStartOnPort(int port, PassthroughResolver resolver, ThreadDispatcher dispatcher,
                                    GameStateProvider stateProvider, ScreenshotProvider screenshotProvider) {
         if (!isPortAvailable(port)) {
             LOG.info("[DebugBridge] Port {} is not available", port);
             return false;
         }
-        
+
         try {
             server = new BridgeServer(port, resolver, dispatcher, stateProvider, screenshotProvider);
             server.setReuseAddr(true);
@@ -185,7 +185,7 @@ public class DebugBridgeMod implements ClientModInitializer {
             return false;
         }
     }
-    
+
     private boolean isPortAvailable(int port) {
         try (ServerSocket socket = new ServerSocket()) {
             socket.setReuseAddress(true);
@@ -195,14 +195,14 @@ public class DebugBridgeMod implements ClientModInitializer {
             return false;
         }
     }
-    
+
     private static class Minecraft262StateProvider implements GameStateProvider {
         @Override
         public JsonObject captureSnapshot() {
             Minecraft mc = Minecraft.getInstance();
             LocalPlayer player = mc.player;
             JsonObject snap = new JsonObject();
-            
+
             if (player != null) {
                 JsonObject playerObj = new JsonObject();
                 playerObj.addProperty("name", player.getName().getString());
@@ -219,7 +219,7 @@ public class DebugBridgeMod implements ClientModInitializer {
             } else {
                 snap.addProperty("player", "not in world");
             }
-            
+
             if (mc.level != null) {
                 JsonObject world = new JsonObject();
                 world.addProperty("dayTime", mc.level.getOverworldClockTime());
@@ -227,10 +227,10 @@ public class DebugBridgeMod implements ClientModInitializer {
                 world.addProperty("isThundering", mc.level.isThundering());
                 snap.add("world", world);
             }
-            
+
             snap.addProperty("fps", mc.getFps());
             snap.addProperty("version", MC_VERSION);
-            
+
             return snap;
         }
     }

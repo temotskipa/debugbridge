@@ -26,12 +26,12 @@ public class FabricMojangResolver implements MappingResolver {
     private final Map<String, String> intermediaryToMojang = new HashMap<>();
     private final Map<String, String> methodCache = new HashMap<>();
     private final Map<String, String> fieldCache = new HashMap<>();
-    
+
     public FabricMojangResolver(String version, ParsedMappings mappings) {
         this.version = version;
         this.mappings = mappings;
         this.fabricResolver = FabricLoader.getInstance().getMappingResolver();
-        
+
         // Build reverse cache: for each Mojang class, resolve to intermediary and cache reverse
         for (String mojangName : mappings.classes.keySet()) {
             try {
@@ -44,7 +44,7 @@ public class FabricMojangResolver implements MappingResolver {
             }
         }
     }
-    
+
     @Override
     public String resolveClass(String mojangClassName) {
         String obfuscated = mappings.classes.getOrDefault(mojangClassName, mojangClassName);
@@ -54,29 +54,29 @@ public class FabricMojangResolver implements MappingResolver {
             return obfuscated;
         }
     }
-    
+
     @Override
     public String resolveField(String mojangClassName, String mojangFieldName) {
         String cacheKey = mojangClassName + "." + mojangFieldName;
         String cached = fieldCache.get(cacheKey);
         if (cached != null) return cached;
-        
+
         // Get the obfuscated field name and type from ProGuard
         Map<String, String> classFields = mappings.fields.get(mojangClassName);
         if (classFields == null) return mojangFieldName;
         String obfFieldName = classFields.get(mojangFieldName);
         if (obfFieldName == null) return mojangFieldName;
-        
+
         Map<String, String> types = mappings.fieldTypes.get(mojangClassName);
         String mojangType = types != null ? types.get(mojangFieldName) : null;
-        
+
         // Try Fabric mapping: walk the ProGuard class hierarchy to find declaring class
         String result = tryFabricFieldMapping(mojangClassName, mojangFieldName, obfFieldName, mojangType);
         if (result != null) {
             fieldCache.put(cacheKey, result);
             return result;
         }
-        
+
         // Fallback: descriptor-based matching
         if (mojangType != null) {
             result = matchFieldByDescriptor(mojangClassName, mojangType);
@@ -85,25 +85,25 @@ public class FabricMojangResolver implements MappingResolver {
                 return result;
             }
         }
-        
+
         return obfFieldName;
     }
-    
+
     @Override
     public String resolveMethod(String mojangClassName, String mojangMethodName, String[] mojangParamTypes) {
         String cacheKey = mojangClassName + "." + mojangMethodName
                 + (mojangParamTypes != null ? "(" + String.join(",", mojangParamTypes) + ")" : "");
         String cached = methodCache.get(cacheKey);
         if (cached != null) return cached;
-        
+
         // Find the method in ProGuard mappings
         Map<String, String> classMethods = mappings.methods.get(mojangClassName);
         if (classMethods == null) return mojangMethodName;
-        
+
         String obfMethodName = null;
         String proguardDesc = null;
         String matchedKey = null;
-        
+
         Map<String, String> descriptors = mappings.methodDescriptors.get(mojangClassName);
         if (descriptors != null) {
             if (mojangParamTypes != null) {
@@ -124,9 +124,9 @@ public class FabricMojangResolver implements MappingResolver {
                 }
             }
         }
-        
+
         if (obfMethodName == null) return mojangMethodName;
-        
+
         // Strategy 1: Use Fabric's mapMethodName with obfuscated names.
         // Walk the ProGuard class hierarchy to find where the method is originally declared,
         // since Fabric only maps methods on the declaring class/interface.
@@ -139,7 +139,7 @@ public class FabricMojangResolver implements MappingResolver {
                 return result;
             }
         }
-        
+
         // Strategy 2: Descriptor-based matching against runtime class methods.
         if (proguardDesc != null) {
             String intermediaryJvmDesc = toIntermediaryJvmMethodDescriptor(proguardDesc);
@@ -150,10 +150,10 @@ public class FabricMojangResolver implements MappingResolver {
                 return result;
             }
         }
-        
+
         return mojangMethodName;
     }
-    
+
     /**
      * Ask Fabric to translate (mojangClassName.obfMethodName / obfJvmDesc) from the
      * "official" namespace into the runtime intermediary namespace.
@@ -181,7 +181,7 @@ public class FabricMojangResolver implements MappingResolver {
         }
         return null;
     }
-    
+
     /**
      * Try Fabric's mapFieldName on the declaring class.
      */
@@ -201,7 +201,7 @@ public class FabricMojangResolver implements MappingResolver {
         }
         return null;
     }
-    
+
     /**
      * Match a method by JVM descriptor against runtime class's declared methods.
      * Only used as fallback when Fabric mapping fails.
@@ -223,7 +223,7 @@ public class FabricMojangResolver implements MappingResolver {
         }
         return null;
     }
-    
+
     /**
      * Match a field by type descriptor against runtime class's declared fields.
      */
@@ -246,12 +246,12 @@ public class FabricMojangResolver implements MappingResolver {
         }
         return null;
     }
-    
+
     @Override
     public String unresolveClass(String runtimeClassName) {
         String cached = intermediaryToMojang.get(runtimeClassName);
         if (cached != null) return cached;
-        
+
         try {
             String obfuscated = fabricResolver.unmapClassName("official", runtimeClassName);
             String mojang = mappings.classesReverse.getOrDefault(obfuscated, runtimeClassName);
@@ -263,36 +263,36 @@ public class FabricMojangResolver implements MappingResolver {
             return runtimeClassName;
         }
     }
-    
+
     @Override
     public Collection<String> getAllClassNames() {
         return mappings.classes.keySet();
     }
-    
+
     @Override
     public Collection<String> getFieldNames(String mojangClassName) {
         Map<String, String> classFields = mappings.fields.get(mojangClassName);
         return classFields != null ? classFields.keySet() : Collections.emptyList();
     }
-    
+
     @Override
     public Collection<String> getMethodSignatures(String mojangClassName) {
         Map<String, String> classMethods = mappings.methods.get(mojangClassName);
         return classMethods != null ? classMethods.keySet() : Collections.emptyList();
     }
-    
+
     @Override
     public String getVersion() {
         return version;
     }
-    
+
     @Override
     public boolean isObfuscated() {
         return true;
     }
-    
+
     // ==================== Type resolution helpers ====================
-    
+
     private String resolveTypeName(String mojangType) {
         if (mojangType.endsWith("[]")) {
             return resolveTypeName(mojangType.substring(0, mojangType.length() - 2)) + "[]";
@@ -302,21 +302,21 @@ public class FabricMojangResolver implements MappingResolver {
             default -> resolveClass(mojangType);
         };
     }
-    
+
     private String obfuscateTypeName(String mojangType) {
         if (mojangType.endsWith("[]")) {
             return obfuscateTypeName(mojangType.substring(0, mojangType.length() - 2)) + "[]";
         }
         return mappings.classes.getOrDefault(mojangType, mojangType);
     }
-    
+
     // ==================== Descriptor conversion ====================
-    
+
     private String toIntermediaryJvmMethodDescriptor(String proguardDesc) {
         int closeParen = proguardDesc.indexOf(')');
         String params = proguardDesc.substring(1, closeParen);
         String returnType = proguardDesc.substring(closeParen + 1);
-        
+
         StringBuilder sb = new StringBuilder("(");
         if (!params.isEmpty()) {
             for (String param : splitTypeList(params)) {
@@ -327,12 +327,12 @@ public class FabricMojangResolver implements MappingResolver {
         sb.append(toJvmDescriptor(resolveTypeName(returnType)));
         return sb.toString();
     }
-    
+
     private String toObfuscatedJvmMethodDescriptor(String proguardDesc) {
         int closeParen = proguardDesc.indexOf(')');
         String params = proguardDesc.substring(1, closeParen);
         String returnType = proguardDesc.substring(closeParen + 1);
-        
+
         StringBuilder sb = new StringBuilder("(");
         if (!params.isEmpty()) {
             for (String param : splitTypeList(params)) {
@@ -343,7 +343,7 @@ public class FabricMojangResolver implements MappingResolver {
         sb.append(toJvmDescriptor(obfuscateTypeName(returnType)));
         return sb.toString();
     }
-    
+
     private List<String> splitTypeList(String types) {
         List<String> result = new ArrayList<>();
         int depth = 0;
@@ -360,7 +360,7 @@ public class FabricMojangResolver implements MappingResolver {
         result.add(types.substring(start));
         return result;
     }
-    
+
     private String getMethodDescriptor(Method m) {
         StringBuilder sb = new StringBuilder("(");
         for (Class<?> p : m.getParameterTypes()) {
@@ -370,7 +370,7 @@ public class FabricMojangResolver implements MappingResolver {
         sb.append(classToDescriptor(m.getReturnType()));
         return sb.toString();
     }
-    
+
     private String classToDescriptor(Class<?> cls) {
         if (cls == void.class) return "V";
         if (cls == boolean.class) return "Z";
@@ -384,7 +384,7 @@ public class FabricMojangResolver implements MappingResolver {
         if (cls.isArray()) return "[" + classToDescriptor(cls.getComponentType());
         return "L" + cls.getName().replace('.', '/') + ";";
     }
-    
+
     private String toJvmDescriptor(String typeName) {
         if (typeName.endsWith("[]")) {
             return "[" + toJvmDescriptor(typeName.substring(0, typeName.length() - 2));

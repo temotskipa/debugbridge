@@ -20,13 +20,13 @@ class LoggerServiceImplTest {
         field.setAccessible(true);
         return field.get(null);
     }
-    
+
     private static void setStaticField(Class<?> owner, String name, Object value) throws Exception {
         Field field = owner.getDeclaredField(name);
         field.setAccessible(true);
         field.set(null, value);
     }
-    
+
     @BeforeEach
     void resetRuntime() throws Exception {
         setStaticField(DebugBridgeAgent.class, "initialized", true);
@@ -36,12 +36,12 @@ class LoggerServiceImplTest {
         ((Map<?, ?>) getStaticField(DebugBridgeLogger.class, "fileLoggers")).clear();
         ((Collection<?>) getStaticField(DebugBridgeLogger.class, "recentErrors")).clear();
     }
-    
+
     @Test
     void firstInstallDoesNotClaimAdviceReuseButSecondInstallDoes() throws Exception {
         LoggerServiceImpl service = new LoggerServiceImpl();
         String outputFile = Files.createTempFile("debugbridge-agent-service", ".log").toString();
-        
+
         LoggerService.InstallResult first = service.install(
                 "example.Target.method",
                 15,
@@ -52,10 +52,10 @@ class LoggerServiceImplTest {
                 1,
                 null
         );
-        
+
         assertTrue(first.success());
         assertNull(first.message());
-        
+
         LoggerService.InstallResult second = service.install(
                 "example.Target.method",
                 15,
@@ -66,15 +66,15 @@ class LoggerServiceImplTest {
                 1,
                 null
         );
-        
+
         assertTrue(second.success());
         assertEquals("Reusing existing advice injection", second.message());
     }
-    
+
     @Test
     void generatedOutputFileUsesJvmTempDirectory() {
         LoggerServiceImpl service = new LoggerServiceImpl();
-        
+
         LoggerService.InstallResult result = service.install(
                 "example.Target.method",
                 15,
@@ -85,7 +85,7 @@ class LoggerServiceImplTest {
                 1,
                 null
         );
-        
+
         assertTrue(result.success());
         assertTrue(Path.of(result.outputFile()).startsWith(Path.of(System.getProperty("java.io.tmpdir"))));
         assertTrue(result.outputFile().endsWith(".log"));

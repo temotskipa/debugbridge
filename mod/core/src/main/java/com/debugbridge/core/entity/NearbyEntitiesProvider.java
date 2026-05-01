@@ -7,7 +7,7 @@ import com.google.gson.JsonArray;
  * Each version-specific mod implements this using version-appropriate APIs.
  */
 public interface NearbyEntitiesProvider {
-    
+
     /**
      * Get entities within the given range of the local player.
      *
@@ -20,7 +20,7 @@ public interface NearbyEntitiesProvider {
      * @throws Exception if the query fails (e.g. player not in world)
      */
     JsonArray getNearbyEntities(double range, int limit) throws Exception;
-    
+
     /**
      * Get detailed information about a specific entity by its runtime ID.
      *

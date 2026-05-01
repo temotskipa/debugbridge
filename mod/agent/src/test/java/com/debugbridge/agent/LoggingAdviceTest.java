@@ -16,9 +16,9 @@ class LoggingAdviceTest {
                 Object.class,
                 Object[].class
         );
-        
+
         Advice.Origin origin = onEnter.getParameters()[0].getAnnotation(Advice.Origin.class);
-        
+
         assertEquals("#t.#m", origin.value());
     }
 }

@@ -14,7 +14,7 @@ import net.bytebuddy.implementation.bytecode.assign.Assigner;
  * 3. DebugBridgeLogger must be on the bootstrap classloader
  */
 public class LoggingAdvice {
-    
+
     /**
      * Inlined at method entry. Captures method signature, 'this', and arguments.
      *
@@ -27,7 +27,7 @@ public class LoggingAdvice {
             @Advice.AllArguments Object[] args) {
         return DebugBridgeLogger.onEntry(method, self, args);
     }
-    
+
     /**
      * Inlined at method exit (both normal return and exception).
      * Only logs if startTime != 0 (i.e., onEntry logged something).

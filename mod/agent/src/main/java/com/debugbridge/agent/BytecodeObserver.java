@@ -23,7 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * 4. Our observer sees the final transformed bytecode and caches it
  */
 public class BytecodeObserver implements ClassFileTransformer {
-    
+
     private static final Set<String> explicitCacheRequests =
             ConcurrentHashMap.newKeySet();
     // Only cache Minecraft-related classes to avoid memory bloat
@@ -38,10 +38,10 @@ public class BytecodeObserver implements ClassFileTransformer {
     };
     private static volatile BytecodeObserver instance;
     private static volatile Instrumentation instrumentation;
-    
+
     private BytecodeObserver() {
     }
-    
+
     /**
      * Install the observer on the given Instrumentation.
      * Should be called during mod initialization, AFTER Mixin has loaded.
@@ -54,28 +54,28 @@ public class BytecodeObserver implements ClassFileTransformer {
             System.out.println("[DebugBridge] BytecodeObserver already installed");
             return true;
         }
-        
+
         instrumentation = inst;
         instance = new BytecodeObserver();
-        
+
         // Register with canRetransform=true so we participate in retransformation
         inst.addTransformer(instance, /* canRetransform */ true);
-        
+
         BytecodeCache.setObserverInstalled(true);
-        
+
         System.out.println("[DebugBridge] BytecodeObserver installed, Mixin present: "
                 + BytecodeCache.isMixinPresent());
-        
+
         return true;
     }
-    
+
     /**
      * Get the Instrumentation instance.
      */
     public static Instrumentation getInstrumentation() {
         return instrumentation;
     }
-    
+
     /**
      * Manually trigger caching of an already-loaded class.
      * Used when we want to instrument a class that loaded before our observer.
@@ -84,12 +84,12 @@ public class BytecodeObserver implements ClassFileTransformer {
         if (instrumentation == null) {
             return;
         }
-        
+
         String internalName = clazz.getName().replace('.', '/');
         if (BytecodeCache.has(internalName)) {
             return; // Already cached
         }
-        
+
         // Force retransformation to capture current bytecode. Explicit requests
         // are cached even for mod classes outside the default Minecraft prefixes.
         explicitCacheRequests.add(internalName);
@@ -105,27 +105,27 @@ public class BytecodeObserver implements ClassFileTransformer {
                     + clazz.getName() + ": " + e.getMessage());
         }
     }
-    
+
     @Override
     public byte[] transform(ClassLoader loader, String className,
                             Class<?> classBeingRedefined,
                             ProtectionDomain protectionDomain,
                             byte[] classfileBuffer) {
-        
+
         // Only observe, never modify
         // Cache bytecode for classes we might want to instrument later
-        
+
         if (className == null || classfileBuffer == null) {
             return null;
         }
-        
+
         // Skip lambda and synthetic classes
         for (String pattern : SKIP_PATTERNS) {
             if (className.contains(pattern)) {
                 return null;
             }
         }
-        
+
         boolean shouldCache = explicitCacheRequests.remove(className);
         if (!shouldCache) {
             // Only cache Minecraft classes by default to avoid memory bloat.
@@ -136,12 +136,12 @@ public class BytecodeObserver implements ClassFileTransformer {
                 }
             }
         }
-        
+
         if (shouldCache) {
             // This is the POST-Mixin bytecode (we registered after Mixin)
             BytecodeCache.put(className, classfileBuffer);
         }
-        
+
         // Return null = don't modify the bytecode
         return null;
     }

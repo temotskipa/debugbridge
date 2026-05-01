@@ -15,9 +15,9 @@ import java.lang.reflect.Field;
 import java.util.List;
 
 public class Minecraft12111ChatHistoryProvider implements ChatHistoryProvider {
-    
+
     private static volatile Field allMessagesField;
-    
+
     private static Field allMessagesField(MappingResolver resolver) throws NoSuchFieldException {
         Field f = allMessagesField;
         if (f != null) return f;
@@ -28,7 +28,7 @@ public class Minecraft12111ChatHistoryProvider implements ChatHistoryProvider {
         allMessagesField = f;
         return f;
     }
-    
+
     @Override
     public JsonArray getRecentMessages(int limit, MappingResolver resolver, boolean includeJson) throws Exception {
         JsonArray out = new JsonArray();
@@ -36,11 +36,11 @@ public class Minecraft12111ChatHistoryProvider implements ChatHistoryProvider {
         if (mc.gui == null) return out;
         ChatComponent chat = mc.gui.getChat();
         if (chat == null) return out;
-        
+
         @SuppressWarnings("unchecked")
         List<GuiMessage> messages = (List<GuiMessage>) allMessagesField(resolver).get(chat);
         if (messages == null) return out;
-        
+
         // ChatComponent stores newest-first; honor that.
         int n = Math.min(limit, messages.size());
         for (int i = 0; i < n; i++) {

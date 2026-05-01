@@ -17,7 +17,7 @@ import java.util.logging.*;
  * lifecycle. Injection is handled by DebugBridgeAgent.
  */
 public class DebugBridgeLogger {
-    
+
     // Methods that already have advice bytecode injected - never retransform twice
     // Public so DebugBridgeAgent (in agent module) can access it for error recovery
     public static final Set<String> injectedMethods = ConcurrentHashMap.newKeySet();
@@ -34,20 +34,20 @@ public class DebugBridgeLogger {
     // Reusable file loggers
     private static final ConcurrentHashMap<String, Logger> fileLoggers =
             new ConcurrentHashMap<>();
-    
+
     // Error tracking for external queries
     private static final CopyOnWriteArrayList<LogError> recentErrors =
             new CopyOnWriteArrayList<>();
     private static final int MAX_ERRORS = 100;
-    
+
     // Callback for triggering advice injection (set by DebugBridgeAgent)
     private static volatile Runnable onNeedInjection;
     private static volatile java.util.function.Consumer<String> injector;
-    
+
     // ----------------------------------------------------------------
     // LogEntry - represents one active logger
     // ----------------------------------------------------------------
-    
+
     /**
      * Called at method entry. Returns startTime (nonzero) if any logger
      * actually logged; 0 means "nothing logged, skip onExit."
@@ -55,15 +55,15 @@ public class DebugBridgeLogger {
     public static long onEntry(String methodId, Object self, Object[] args) {
         CopyOnWriteArrayList<LogEntry> entries = active.get(methodId);
         if (entries == null || entries.isEmpty()) return 0L;
-        
+
         long startTime = 0L;
         for (LogEntry e : entries) {
             if (!e.isLive()) continue;
             try {
                 if (e.filter != null && !e.filter.test(args)) continue;
-                
+
                 if (startTime == 0L) startTime = System.nanoTime();
-                
+
                 StringBuilder sb = new StringBuilder(128)
                         .append("[ENTER] ").append(methodId);
                 if (e.logArgs && args != null) {
@@ -78,11 +78,11 @@ public class DebugBridgeLogger {
         }
         return startTime;
     }
-    
+
     // ----------------------------------------------------------------
     // Hot path - called from inlined advice bytecode
     // ----------------------------------------------------------------
-    
+
     /**
      * Called at method exit (normal return or exception).
      * Skipped entirely if startTime == 0 (nothing was logged at entry).
@@ -92,7 +92,7 @@ public class DebugBridgeLogger {
         if (startTime == 0L) return;
         CopyOnWriteArrayList<LogEntry> entries = active.get(methodId);
         if (entries == null) return;
-        
+
         long elapsed = System.nanoTime() - startTime;
         for (LogEntry e : entries) {
             if (!e.isLive()) continue;
@@ -119,18 +119,18 @@ public class DebugBridgeLogger {
             }
         }
     }
-    
+
     /**
      * Set the injector callback. Called by DebugBridgeAgent during init.
      */
     public static void setInjector(java.util.function.Consumer<String> inj) {
         injector = inj;
     }
-    
+
     // ----------------------------------------------------------------
     // Control API - called from TCP/Lua handler
     // ----------------------------------------------------------------
-    
+
     /**
      * Install a logger on a method. Returns the logger ID.
      * If the method has not been instrumented yet, triggers advice injection.
@@ -152,21 +152,21 @@ public class DebugBridgeLogger {
                                boolean logArgs, boolean logReturn,
                                boolean logTiming, int argDepth) {
         long id = nextId.getAndIncrement();
-        
+
         LogEntry entry = new LogEntry(
                 id, methodId,
                 getOrCreateLogger(outputFile),
                 System.nanoTime() + duration.toNanos(),
                 filter, logArgs, logReturn, logTiming, argDepth
         );
-        
+
         active.computeIfAbsent(methodId, k -> new CopyOnWriteArrayList<>())
                 .add(entry);
-        
+
         // Schedule automatic expiry
         scheduler.schedule(() -> remove(id, methodId),
                 duration.toMillis(), TimeUnit.MILLISECONDS);
-        
+
         // Inject advice if this method hasn't been instrumented yet
         if (injectedMethods.add(methodId)) {
             if (injector != null) {
@@ -182,10 +182,10 @@ public class DebugBridgeLogger {
                         + "cannot instrument " + methodId);
             }
         }
-        
+
         return id;
     }
-    
+
     /**
      * Cancel a logger immediately by ID.
      *
@@ -203,7 +203,7 @@ public class DebugBridgeLogger {
         }
         return false;
     }
-    
+
     /**
      * List all currently active (non-expired, non-canceled) loggers.
      */
@@ -225,7 +225,7 @@ public class DebugBridgeLogger {
         }
         return result;
     }
-    
+
     /**
      * Get recent errors from logger execution.
      */
@@ -242,42 +242,42 @@ public class DebugBridgeLogger {
         }
         return result;
     }
-    
+
     /**
      * Check whether a method already has advice injected.
      */
     public static boolean isInjected(String methodId) {
         return injectedMethods.contains(methodId);
     }
-    
+
     private static void remove(long id, String methodId) {
         CopyOnWriteArrayList<LogEntry> list = active.get(methodId);
         if (list == null) return;
         list.removeIf(e -> e.id == id);
         // Do NOT remove the key or retransform - advice stays for reuse
     }
-    
+
     // ----------------------------------------------------------------
     // Internal helpers
     // ----------------------------------------------------------------
-    
+
     private static void reportError(long loggerId, String methodId,
                                     String phase, Throwable t) {
         LogError err = new LogError(loggerId, methodId, phase,
                 t.getClass().getSimpleName() + ": " + t.getMessage(),
                 System.currentTimeMillis());
-        
+
         recentErrors.add(err);
         // Cap error list size
         while (recentErrors.size() > MAX_ERRORS) {
             recentErrors.remove(0);
         }
-        
+
         System.err.println("[DebugBridge] Logger #" + loggerId
                 + " error in " + phase + " of " + methodId
                 + ": " + t.getMessage());
     }
-    
+
     private static Logger getOrCreateLogger(String path) {
         return fileLoggers.computeIfAbsent(path, p -> {
             Logger logger = Logger.getLogger("DebugBridge." + p);
@@ -299,7 +299,7 @@ public class DebugBridgeLogger {
             return logger;
         });
     }
-    
+
     private static void appendArgs(StringBuilder sb, Object[] args, int depth) {
         sb.append('[');
         for (int i = 0; i < args.length; i++) {
@@ -308,7 +308,7 @@ public class DebugBridgeLogger {
         }
         sb.append(']');
     }
-    
+
     /**
      * Format an object for logging output.
      * depth=0: ClassName@hashHex
@@ -340,7 +340,7 @@ public class DebugBridgeLogger {
                     + "[toString threw " + t.getClass().getSimpleName() + "]";
         }
     }
-    
+
     public static class LogEntry {
         public final long id;
         public final String methodId;
@@ -352,7 +352,7 @@ public class DebugBridgeLogger {
         public final boolean logTiming;
         public final int argDepth;
         private volatile boolean cancelled = false;
-        
+
         public LogEntry(long id, String methodId, Logger logger,
                         long expiresAt, Predicate<Object[]> filter,
                         boolean logArgs, boolean logReturn,
@@ -367,23 +367,23 @@ public class DebugBridgeLogger {
             this.logTiming = logTiming;
             this.argDepth = argDepth;
         }
-        
+
         public boolean isLive() {
             return !cancelled && System.nanoTime() - expiresAt < 0;
         }
-        
+
         public void cancel() {
             cancelled = true;
         }
     }
-    
+
     private static class LogError {
         final long loggerId;
         final String methodId;
         final String phase;
         final String message;
         final long timestampMs;
-        
+
         LogError(long loggerId, String methodId, String phase,
                  String message, long timestampMs) {
             this.loggerId = loggerId;

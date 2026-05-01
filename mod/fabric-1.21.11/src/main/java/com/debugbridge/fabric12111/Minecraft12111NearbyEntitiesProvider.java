@@ -26,7 +26,7 @@ import java.util.concurrent.TimeUnit;
  * per-entity Lua-to-Java bridge calls.
  */
 public class Minecraft12111NearbyEntitiesProvider implements NearbyEntitiesProvider {
-    
+
     private static final EquipmentSlot[] PRIMARY_SLOT_ORDER = {
             EquipmentSlot.HEAD,
             EquipmentSlot.MAINHAND,
@@ -35,47 +35,47 @@ public class Minecraft12111NearbyEntitiesProvider implements NearbyEntitiesProvi
             EquipmentSlot.LEGS,
             EquipmentSlot.FEET,
     };
-    
+
     @Override
     public JsonArray getNearbyEntities(double range, int limit) throws Exception {
         Minecraft mc = Minecraft.getInstance();
         CompletableFuture<JsonArray> future = new CompletableFuture<>();
-        
+
         mc.execute(() -> {
             try {
                 if (mc.player == null || mc.level == null) {
                     future.complete(new JsonArray());
                     return;
                 }
-                
+
                 double px = mc.player.getX();
                 double py = mc.player.getY();
                 double pz = mc.player.getZ();
                 double rangeSq = range * range;
-                
+
                 // Collect and sort by distance
                 List<EntityEntry> entries = new ArrayList<>();
                 for (Entity entity : mc.level.entitiesForRendering()) {
                     if (entity == mc.player) continue;
-                    
+
                     double dx = entity.getX() - px;
                     double dy = entity.getY() - py;
                     double dz = entity.getZ() - pz;
                     double distSq = dx * dx + dy * dy + dz * dz;
-                    
+
                     if (distSq <= rangeSq) {
                         entries.add(new EntityEntry(entity, Math.sqrt(distSq)));
                     }
                 }
-                
+
                 entries.sort(Comparator.comparingDouble(e -> e.distance));
-                
+
                 JsonArray arr = new JsonArray();
                 int count = 0;
                 for (EntityEntry entry : entries) {
                     if (count >= limit) break;
                     Entity entity = entry.entity;
-                    
+
                     JsonObject obj = new JsonObject();
                     obj.addProperty("id", entity.getId());
                     obj.addProperty("type", entity.getClass().getName());
@@ -83,19 +83,19 @@ public class Minecraft12111NearbyEntitiesProvider implements NearbyEntitiesProvi
                     obj.addProperty("x", Math.round(entity.getX() * 10.0) / 10.0);
                     obj.addProperty("y", Math.round(entity.getY() * 10.0) / 10.0);
                     obj.addProperty("z", Math.round(entity.getZ() * 10.0) / 10.0);
-                    
+
                     // Custom name (cheap for most entities)
                     var customName = entity.getCustomName();
                     if (customName != null) {
                         obj.addProperty("customName", customName.getString());
                     }
-                    
+
                     // Entity type registry name
                     var typeKey = entity.getType().getDescriptionId();
                     if (typeKey != null) {
                         obj.addProperty("typeId", typeKey);
                     }
-                    
+
                     // Primary equipment / framed / displayed item for thumbnail rendering
                     JsonObject primary = null;
                     switch (entity) {
@@ -113,32 +113,32 @@ public class Minecraft12111NearbyEntitiesProvider implements NearbyEntitiesProvi
                     if (primary != null) {
                         obj.add("primaryEquipment", primary);
                     }
-                    
+
                     arr.add(obj);
                     count++;
                 }
-                
+
                 future.complete(arr);
             } catch (Exception e) {
                 future.completeExceptionally(e);
             }
         });
-        
+
         return future.get(5, TimeUnit.SECONDS);
     }
-    
+
     @Override
     public JsonObject getEntityDetails(int entityId) throws Exception {
         Minecraft mc = Minecraft.getInstance();
         CompletableFuture<JsonObject> future = new CompletableFuture<>();
-        
+
         mc.execute(() -> {
             try {
                 if (mc.player == null || mc.level == null) {
                     future.complete(null);
                     return;
                 }
-                
+
                 Entity target = null;
                 for (Entity entity : mc.level.entitiesForRendering()) {
                     if (entity.getId() == entityId) {
@@ -146,31 +146,31 @@ public class Minecraft12111NearbyEntitiesProvider implements NearbyEntitiesProvi
                         break;
                     }
                 }
-                
+
                 if (target == null) {
                     future.complete(null);
                     return;
                 }
-                
+
                 JsonObject obj = new JsonObject();
                 obj.addProperty("entityId", target.getId());
                 obj.addProperty("type", target.getClass().getName());
-                
+
                 // Custom name
                 var customName = target.getCustomName();
                 if (customName != null) {
                     obj.addProperty("customName", customName.getString());
                 }
-                
+
                 // Position
                 obj.addProperty("x", target.getX());
                 obj.addProperty("y", target.getY());
                 obj.addProperty("z", target.getZ());
-                
+
                 // Distance from player
                 obj.addProperty("distance",
                         Math.round(target.distanceTo(mc.player) * 10.0) / 10.0);
-                
+
                 // ItemFrame-specific: the framed item, with damage if applicable.
                 if (target instanceof ItemFrame frame) {
                     ItemStack framed = frame.getItem();
@@ -189,13 +189,13 @@ public class Minecraft12111NearbyEntitiesProvider implements NearbyEntitiesProvi
                         obj.add("frameItem", item);
                     }
                 }
-                
+
                 // LivingEntity-specific fields
                 if (target instanceof LivingEntity living) {
                     obj.addProperty("health", Math.round(living.getHealth() * 10.0) / 10.0);
                     obj.addProperty("maxHealth", Math.round(living.getMaxHealth() * 10.0) / 10.0);
                     obj.addProperty("armor", living.getArmorValue());
-                    
+
                     // Equipment
                     JsonObject equipment = new JsonObject();
                     addEquipment(equipment, "MAINHAND", living, EquipmentSlot.MAINHAND);
@@ -208,20 +208,20 @@ public class Minecraft12111NearbyEntitiesProvider implements NearbyEntitiesProvi
                         obj.add("equipment", equipment);
                     }
                 }
-                
+
                 // Display entity data (text/item/block displays)
                 extractDisplayData(obj, target);
-                
+
                 // State flags
                 obj.addProperty("isOnFire", target.isOnFire());
                 obj.addProperty("isSprinting", target.isSprinting());
-                
+
                 // Vehicle (full class name so BridgeServer can map it)
                 Entity vehicle = target.getVehicle();
                 if (vehicle != null) {
                     obj.addProperty("vehicle", vehicle.getClass().getName());
                 }
-                
+
                 // Passengers (full class names so BridgeServer can map them)
                 if (!target.getPassengers().isEmpty()) {
                     JsonArray passengers = new JsonArray();
@@ -230,7 +230,7 @@ public class Minecraft12111NearbyEntitiesProvider implements NearbyEntitiesProvi
                     }
                     obj.add("passengers", passengers);
                 }
-                
+
                 // Tags
                 if (!target.getTags().isEmpty()) {
                     JsonArray tags = new JsonArray();
@@ -239,22 +239,22 @@ public class Minecraft12111NearbyEntitiesProvider implements NearbyEntitiesProvi
                     }
                     obj.add("tags", tags);
                 }
-                
+
                 // Player-specific
                 if (target instanceof Player player) {
                     obj.addProperty("isPlayer", true);
                     obj.addProperty("playerName", player.getGameProfile().name());
                 }
-                
+
                 future.complete(obj);
             } catch (Exception e) {
                 future.completeExceptionally(e);
             }
         });
-        
+
         return future.get(5, TimeUnit.SECONDS);
     }
-    
+
     private void extractDisplayData(JsonObject obj, Entity target) {
         try {
             if (target instanceof Display.ItemDisplay itemDisplay) {
@@ -288,7 +288,7 @@ public class Minecraft12111NearbyEntitiesProvider implements NearbyEntitiesProvi
             // Render states may not be populated yet; ignore silently
         }
     }
-    
+
     private void addEquipment(JsonObject equipment, String slotName, LivingEntity living, EquipmentSlot slot) {
         ItemStack stack = living.getItemBySlot(slot);
         if (stack != null && !stack.isEmpty()) {
@@ -304,7 +304,7 @@ public class Minecraft12111NearbyEntitiesProvider implements NearbyEntitiesProvi
             equipment.add(slotName, item);
         }
     }
-    
+
     private JsonObject pickPrimaryEquipment(LivingEntity living) {
         for (EquipmentSlot slot : PRIMARY_SLOT_ORDER) {
             JsonObject obj = buildPrimary(slot.name(), living.getItemBySlot(slot));
@@ -312,7 +312,7 @@ public class Minecraft12111NearbyEntitiesProvider implements NearbyEntitiesProvi
         }
         return null;
     }
-    
+
     private JsonObject buildPrimary(String slot, ItemStack stack) {
         if (stack == null || stack.isEmpty()) return null;
         var key = BuiltInRegistries.ITEM.getKey(stack.getItem());
@@ -321,7 +321,7 @@ public class Minecraft12111NearbyEntitiesProvider implements NearbyEntitiesProvi
         obj.addProperty("itemId", key.toString());
         return obj;
     }
-    
+
     private record EntityEntry(Entity entity, double distance) {
     }
 }

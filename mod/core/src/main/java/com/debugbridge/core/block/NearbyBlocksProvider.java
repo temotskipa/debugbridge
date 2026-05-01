@@ -12,7 +12,7 @@ import com.google.gson.JsonObject;
  * BlockEntity.
  */
 public interface NearbyBlocksProvider {
-    
+
     /**
      * Get block entities within the given range of the local player.
      *
@@ -25,7 +25,7 @@ public interface NearbyBlocksProvider {
      * @throws Exception on query failure
      */
     JsonArray getNearbyBlocks(double range, int limit) throws Exception;
-    
+
     /**
      * Get detailed information about a specific block at (x, y, z).
      *

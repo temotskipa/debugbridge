@@ -14,7 +14,7 @@ import net.bytebuddy.implementation.bytecode.assign.Assigner;
 public final class AgentLoggingAdvice {
     private AgentLoggingAdvice() {
     }
-    
+
     @Advice.OnMethodEnter
     static long onEnter(
             @Advice.Origin("#t.#m") String method,
@@ -23,7 +23,7 @@ public final class AgentLoggingAdvice {
     ) {
         return DebugBridgeLogger.onEntry(method, self, args);
     }
-    
+
     @Advice.OnMethodExit(onThrowable = Throwable.class)
     static void onExit(
             @Advice.Origin("#t.#m") String method,

@@ -21,25 +21,25 @@ class ReflectiveLoggerServiceTest {
         Method allocateInstance = unsafeType.getMethod("allocateInstance", Class.class);
         return allocateInstance.invoke(unsafe, type);
     }
-    
+
     private static void setField(Object owner, String name, Object value) throws Exception {
         Field field = owner.getClass().getDeclaredField(name);
         field.setAccessible(true);
         field.set(owner, value);
     }
-    
+
     @BeforeEach
     void setUp() {
         DebugBridgeAgent.setInitialized(false);
         DebugBridgeLogger.reset();
     }
-    
+
     @Test
     void reportsUnavailableUntilAgentIsInitialized() {
         ReflectiveLoggerService service = new ReflectiveLoggerService();
-        
+
         assertFalse(service.isAvailable());
-        
+
         LoggerService.InstallResult result = service.install(
                 "example.Target.method",
                 15,
@@ -53,12 +53,12 @@ class ReflectiveLoggerServiceTest {
         assertFalse(result.success());
         assertTrue(result.error().contains("not available"));
     }
-    
+
     @Test
     void delegatesInstallCancelAndListOperationsToHooks() {
         DebugBridgeAgent.setInitialized(true);
         ReflectiveLoggerService service = new ReflectiveLoggerService();
-        
+
         LoggerService.InstallResult first = service.install(
                 "example.Target.method",
                 15,
@@ -69,7 +69,7 @@ class ReflectiveLoggerServiceTest {
                 2,
                 Map.of("type", "sample", "n", 4)
         );
-        
+
         assertTrue(first.success());
         assertEquals(1L, first.loggerId());
         assertEquals("C:/temp/logger.log", first.outputFile());
@@ -82,12 +82,12 @@ class ReflectiveLoggerServiceTest {
         assertFalse(DebugBridgeLogger.lastFilter.test(new Object[0]));
         assertFalse(DebugBridgeLogger.lastFilter.test(new Object[0]));
         assertTrue(DebugBridgeLogger.lastFilter.test(new Object[0]));
-        
+
         assertEquals(1, service.listActive().size());
         assertEquals("example.Target.method", service.listInjectedMethods().get(0));
         assertTrue(service.cancel(first.loggerId()));
         assertTrue(service.listActive().isEmpty());
-        
+
         LoggerService.InstallResult second = service.install(
                 "example.Target.method",
                 15,
@@ -98,16 +98,16 @@ class ReflectiveLoggerServiceTest {
                 2,
                 null
         );
-        
+
         assertTrue(second.success());
         assertEquals("Reusing existing advice injection", second.message());
     }
-    
+
     @Test
     void generatesPortableTempPathWhenOutputFileIsMissing() {
         DebugBridgeAgent.setInitialized(true);
         ReflectiveLoggerService service = new ReflectiveLoggerService();
-        
+
         LoggerService.InstallResult result = service.install(
                 "example.Target.method",
                 30,
@@ -118,14 +118,14 @@ class ReflectiveLoggerServiceTest {
                 1,
                 null
         );
-        
+
         assertTrue(result.success());
         assertNotNull(result.outputFile());
         assertTrue(result.outputFile().endsWith(".log"));
         assertEquals(Path.of(System.getProperty("java.io.tmpdir")).getRoot(),
                 Path.of(result.outputFile()).getRoot());
     }
-    
+
     @Test
     void retriesRuntimeLookupAfterUnavailableBindingBecomesStale() throws Exception {
         DebugBridgeAgent.setInitialized(true);
@@ -134,7 +134,7 @@ class ReflectiveLoggerServiceTest {
                 Class.forName("com.debugbridge.core.logging.ReflectiveLoggerService$RuntimeAccess")
         );
         setField(service, "runtime", unavailableRuntime);
-        
+
         assertTrue(service.isAvailable());
     }
 }

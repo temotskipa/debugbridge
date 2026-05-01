@@ -16,12 +16,12 @@ import java.util.function.Predicate;
  * Instantiated by the agent module and registered with the BridgeServer.
  */
 public class LoggerServiceImpl implements LoggerService {
-    
+
     @Override
     public boolean isAvailable() {
         return DebugBridgeAgent.isInitialized();
     }
-    
+
     @Override
     public InstallResult install(String methodId, int durationSeconds, String outputFile,
                                  boolean logArgs, boolean logReturn, boolean logTiming,
@@ -31,10 +31,10 @@ public class LoggerServiceImpl implements LoggerService {
             if (outputFile == null || outputFile.isBlank()) {
                 outputFile = LoggerOutputFiles.generate(methodId);
             }
-            
+
             // Build filter predicate
             Predicate<Object[]> predicate = buildFilter(filter);
-            
+
             // Install the logger
             long loggerId = DebugBridgeLogger.install(
                     methodId,
@@ -46,21 +46,21 @@ public class LoggerServiceImpl implements LoggerService {
                     logTiming,
                     argDepth
             );
-            
+
             String message = alreadyInjected ? "Reusing existing advice injection" : null;
-            
+
             return InstallResult.success(loggerId, outputFile, message);
-            
+
         } catch (Exception e) {
             return InstallResult.error(e.getClass().getSimpleName() + ": " + e.getMessage());
         }
     }
-    
+
     @Override
     public boolean cancel(long id) {
         return DebugBridgeLogger.cancel(id);
     }
-    
+
     @Override
     public List<LoggerInfo> listActive() {
         List<LoggerInfo> result = new ArrayList<>();
@@ -74,17 +74,17 @@ public class LoggerServiceImpl implements LoggerService {
         }
         return result;
     }
-    
+
     @Override
     public List<String> listInjectedMethods() {
         return new ArrayList<>(DebugBridgeLogger.injectedMethods);
     }
-    
+
     private Predicate<Object[]> buildFilter(Map<String, Object> filter) {
         if (filter == null || filter.isEmpty()) {
             return null;
         }
-        
+
         String type = (String) filter.get("type");
         return switch (type) {
             case "throttle" -> {

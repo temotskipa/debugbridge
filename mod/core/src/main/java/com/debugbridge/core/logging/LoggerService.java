@@ -8,7 +8,7 @@ import java.util.Map;
  * Implemented by the agent module when loaded; a no-op stub is used otherwise.
  */
 public interface LoggerService {
-    
+
     /**
      * No-op implementation when the agent is not loaded.
      */
@@ -17,7 +17,7 @@ public interface LoggerService {
         public boolean isAvailable() {
             return false;
         }
-        
+
         @Override
         public InstallResult install(String methodId, int durationSeconds, String outputFile,
                                      boolean logArgs, boolean logReturn, boolean logTiming,
@@ -27,28 +27,28 @@ public interface LoggerService {
                             "Start Minecraft with -javaagent:debugbridge-agent.jar or call " +
                             "ByteBuddyAgent.install() from the mod initializer.");
         }
-        
+
         @Override
         public boolean cancel(long id) {
             return false;
         }
-        
+
         @Override
         public List<LoggerInfo> listActive() {
             return List.of();
         }
-        
+
         @Override
         public List<String> listInjectedMethods() {
             return List.of();
         }
     };
-    
+
     /**
      * Check if the logger service is available (agent loaded).
      */
     boolean isAvailable();
-    
+
     /**
      * Install a logger on a method.
      *
@@ -65,24 +65,24 @@ public interface LoggerService {
     InstallResult install(String methodId, int durationSeconds, String outputFile,
                           boolean logArgs, boolean logReturn, boolean logTiming,
                           int argDepth, Map<String, Object> filter);
-    
+
     /**
      * Cancel a logger by ID.
      *
      * @return true if the logger was found and cancelled
      */
     boolean cancel(long id);
-    
+
     /**
      * List all active loggers.
      */
     List<LoggerInfo> listActive();
-    
+
     /**
      * List all methods that have advice injected (active or not).
      */
     List<String> listInjectedMethods();
-    
+
     /**
      * Result of installing a logger.
      */
@@ -90,12 +90,12 @@ public interface LoggerService {
         public static InstallResult success(long loggerId, String outputFile, String message) {
             return new InstallResult(loggerId, outputFile, message, true, null);
         }
-        
+
         public static InstallResult error(String error) {
             return new InstallResult(-1, null, null, false, error);
         }
     }
-    
+
     /**
      * Info about an active logger.
      */

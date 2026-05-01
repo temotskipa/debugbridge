@@ -13,21 +13,21 @@ class AgentArchitectureTest {
     private static String readMainSource(String fileName) throws IOException {
         return Files.readString(mainSourceDir().resolve(fileName));
     }
-    
+
     private static String readMainSourceIfPresent(String fileName) throws IOException {
         Path path = mainSourceDir().resolve(fileName);
         return Files.exists(path) ? Files.readString(path) : "";
     }
-    
+
     private static Path mainSourceDir() {
         return Path.of(System.getProperty("user.dir"))
                 .resolve("src/main/java/com/debugbridge/agent");
     }
-    
+
     @Test
     void debugBridgeAgentDelegatesByteBuddyInjectionDetails() throws IOException {
         String source = readMainSource("DebugBridgeAgent.java");
-        
+
         assertTrue(
                 source.contains("new AdviceInjector("),
                 "DebugBridgeAgent should delegate injection policy to AdviceInjector"
@@ -40,12 +40,12 @@ class AgentArchitectureTest {
         assertFalse(source.contains("import net.bytebuddy.pool.TypePool;"));
         assertFalse(source.contains("import net.bytebuddy.utility.JavaModule;"));
     }
-    
+
     @Test
     void adviceClassNameMakesClassloaderOwnershipExplicit() throws IOException {
         String sources = readMainSource("DebugBridgeAgent.java") + "\n"
                 + readMainSourceIfPresent("AdviceInjector.java");
-        
+
         assertTrue(
                 sources.contains("AgentLoggingAdvice.class"),
                 "agent transformations should use the agent-owned advice class"
