@@ -1,5 +1,5 @@
 plugins {
-    id("net.fabricmc.fabric-loom") version "1.17.0-alpha.18"
+    id("net.fabricmc.fabric-loom") version "1.17.7"
 }
 
 base {
