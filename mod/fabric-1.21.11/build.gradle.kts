@@ -2,7 +2,7 @@ import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 
 plugins {
-    id("fabric-loom") version "1.17.12"
+    id("fabric-loom") version "1.17.13"
 }
 
 base {
