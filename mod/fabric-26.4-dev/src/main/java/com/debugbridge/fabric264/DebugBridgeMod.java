@@ -25,6 +25,7 @@ import java.nio.file.Path;
 import java.util.function.Consumer;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
@@ -38,7 +39,6 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 public class DebugBridgeMod extends AbstractDebugBridgeMod implements ClientModInitializer {
-    private static final String MC_VERSION = "26.2";
     private static DebugBridgeMod INSTANCE;
 
     public static void onClientTick(Minecraft mc) {
@@ -67,7 +67,8 @@ public class DebugBridgeMod extends AbstractDebugBridgeMod implements ClientModI
 
     @Override
     protected String mcVersion() {
-        return MC_VERSION;
+        // This module runs on more than one snapshot, so the game names its own version.
+        return SharedConstants.getCurrentVersion().id();
     }
 
     @Override
@@ -82,7 +83,7 @@ public class DebugBridgeMod extends AbstractDebugBridgeMod implements ClientModI
 
     @Override
     protected FabricNamespaceLookup createNamespaceLookup() {
-        // 26.2 ships unobfuscated, so the kernel falls back to
+        // 26.4 ships unobfuscated, so the kernel falls back to
         // PassthroughResolver — no Mojang mappings needed.
         return null;
     }
@@ -269,7 +270,7 @@ public class DebugBridgeMod extends AbstractDebugBridgeMod implements ClientModI
             }
 
             snap.fps = mc.getFps();
-            snap.version = MC_VERSION;
+            snap.version = SharedConstants.getCurrentVersion().id();
             return snap;
         }
     }

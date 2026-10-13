@@ -10,7 +10,7 @@ import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.resolver.ServerAddress;
 
 /**
- * Session control for 26.2. {@code disconnect} and {@code quit}
+ * Session control for 26.4. {@code disconnect} and {@code quit}
  * queue onto the game thread and complete asynchronously — their bridge
  * response only acknowledges the request; callers poll {@code snapshot} /
  * {@code screenInspect} for the outcome. {@code joinServer} additionally waits

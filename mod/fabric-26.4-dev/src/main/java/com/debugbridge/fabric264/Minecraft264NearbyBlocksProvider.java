@@ -25,7 +25,7 @@ import net.minecraft.world.level.block.entity.SignTextSlot;
 import net.minecraft.world.level.chunk.LevelChunk;
 
 /**
- * Native nearby-blocks query for Minecraft 26.2. Walks loaded chunks within
+ * Native nearby-blocks query for Minecraft 26.4. Walks loaded chunks within
  * range, collects block entities, and returns type-specific summary fields.
  */
 public class Minecraft264NearbyBlocksProvider implements NearbyBlocksProvider {
