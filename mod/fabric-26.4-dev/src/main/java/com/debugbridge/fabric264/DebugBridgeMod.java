@@ -227,7 +227,11 @@ public class DebugBridgeMod extends AbstractDebugBridgeMod implements ClientModI
                 p.food = player.getFoodData().getFoodLevel();
                 p.saturation = player.getFoodData().getSaturationLevel();
                 p.dimension = player.level().dimension().identifier().toString();
-                p.biome = ""; // Stub — see review queue.
+                p.biome = player.level()
+                        .getBiome(player.blockPosition())
+                        .unwrapKey()
+                        .map(key -> key.identifier().toString())
+                        .orElse("");
                 Vec3 vel = player.getDeltaMovement();
                 p.velocity = new Vec3Dto(vel.x, vel.y, vel.z);
                 Vec3 look = player.getLookAngle();

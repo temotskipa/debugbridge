@@ -28,6 +28,17 @@ dependencies {
     include("com.google.code.gson:gson:2.14.0")
 }
 
+loom {
+    runs {
+        configureEach {
+            // The snapshot's launcher metadata starts the game with this; Loom does not pass
+            // it on. Without it shader compilation in shaderc overflows the stack of the
+            // calling thread and the client dies at startup with an access violation.
+            vmArg("-XX:StackShadowPages=32")
+        }
+    }
+}
+
 tasks.withType<JavaCompile>().configureEach {
     // The 26.4 snapshot metadata declares Java runtime 25.
     options.release.set(25)
