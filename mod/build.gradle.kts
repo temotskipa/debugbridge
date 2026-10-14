@@ -2,12 +2,12 @@ import com.diffplug.gradle.spotless.SpotlessExtension
 
 plugins {
     java
-    id("com.diffplug.spotless") version "8.7.0" apply false
+    id("com.diffplug.spotless") version "8.10.0" apply false
 }
 
 allprojects {
     group = "com.debugbridge"
-    version = "2.0.0"
+    version = "2.1.0"
 
     repositories {
         mavenCentral()
