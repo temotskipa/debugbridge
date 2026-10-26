@@ -19,8 +19,8 @@ dependencies {
     implementation("org.apache.groovy:groovy:5.1.1")
     implementation("org.java-websocket:Java-WebSocket:1.6.0")
     implementation("com.google.code.gson:gson:2.14.0")
-    minecraft("com.mojang:minecraft:26.4-snapshot-3")
-    implementation("net.fabricmc:fabric-loader:0.19.5")
+    minecraft("com.mojang:minecraft:26.4-snapshot-5")
+    implementation("net.fabricmc:fabric-loader:0.20.1")
 
     include(project(":core"))
     include("org.apache.groovy:groovy:5.1.1")

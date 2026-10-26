@@ -77,7 +77,7 @@ public class DeveloperWarningScreen extends Screen {
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(GuiGraphicsExtractor graphics) {
         graphics.fill(0, 0, this.width, this.height, 0xC0000000);
         graphics.centeredText(this.font, this.title, this.width / 2, 15, 0xFFFF5555);
 
@@ -92,7 +92,7 @@ public class DeveloperWarningScreen extends Screen {
             }
         }
 
-        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+        super.extractRenderState(graphics);
     }
 
     @Override
