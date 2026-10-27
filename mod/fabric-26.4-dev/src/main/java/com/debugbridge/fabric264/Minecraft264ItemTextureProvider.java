@@ -297,6 +297,7 @@ public class Minecraft264ItemTextureProvider implements ItemTextureProvider {
                 RenderPass renderPass = device.createCommandEncoder()
                         .createRenderPass(
                                 () -> "dbg_item",
+                                RenderPassLayouts.COLOR_DEPTH,
                                 colorView,
                                 Optional.of(TRANSPARENT),
                                 depthView,
